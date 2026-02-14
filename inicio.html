@@ -133,11 +133,15 @@
         sincronizarSelecao(hash);
     }
 
+    function obterItensDrawer() {
+        return $("#lateral").find(".k-drawer-item");
+    }
+
     function sincronizarSelecao(hash) {
         const drawer = $("#lateral").data("kendoDrawer");
         if (!drawer) return;
 
-        const itens = drawer.items();
+        const itens = obterItensDrawer();
         itens.removeClass("k-selected");
 
         itens.each(function () {
@@ -205,7 +209,7 @@
 
         const drawer = $("#lateral").data("kendoDrawer");
 
-        drawer.items().each(function(index) {
+        obterItensDrawer().each(function(index) {
             const conf = menuItems[index];
             if (!conf) return;
 
@@ -219,7 +223,6 @@
 
             if (conf.isGroup) {
                 $(this).addClass("grupo");
-                $(this).removeClass("k-drawer-item");
                 $(this).html(`<span class="k-item-text">${conf.text}</span>`);
             }
         });
