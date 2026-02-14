@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <title>Kendo Grid 2018 — API GET (ttResult) — pt-BR</title>
+
+    <!-- Seus assets 2018 -->
+    <link rel="stylesheet" href="styles/web/kendo.common.css">
+    <link rel="stylesheet" href="styles/web/kendo.default.css">
+    <link rel="stylesheet" href="styles/mobile/kendo.mobile.all.css">
+    <script src="js/jquery.js"></script>
+    <script src="js/kendo.all.js"></script>
+    <script src="js/cultures/kendo.culture.pt-BR.js"></script>
+    <script src="js/messages/kendo.messages.pt-BR.js"></script>
+
+    <style>
+        body { font-family: sans-serif; margin: 16px; }
+        .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; align-items: center; }
+        #wrapper { border: 1px dashed #aaa; padding: 8px; }
+        .note { color:#555; font-size:12px; }
+        .k-grid tr.k-state-selected td { box-shadow: inset 0 0 0 9999px rgba(33,150,243,.12); }
+    </style>
+</head>
+<body>
+<h3>Kendo UI Grid (jQuery) 2018 — pt-BR — API GET (ttResult)</h3>
+
+<div class="controls">
+    <label>Largura do container:</label>
+    <input type="range" id="wRange" min="320" max="1280" step="10" value="900">
+    <span id="wLabel">900px</span>
+
+    <button id="forcePhone">Forçar “phone”</button>
+    <button id="forceAuto">Modo automático</button>
+    <button id="btnReload">Recarregar</button>
+
+    <button id="btnReadAll"><b>Ler seleção (todas as colunas)</b></button>
+
+    <span class="note">Selecione uma linha e clique no botão. Datas/valores em pt-BR.</span>
+</div>
+
+<div id="wrapper" style="width:900px; max-width:100%;">
+    <div id="grid"></div>
+</div>
+
+<div id="resultWindow" style="display:none;">
+    <pre id="resultPre" style="white-space:pre-wrap; word-break:break-word;"></pre>
+</div>
+
+<script>
+    // ====== Cultura pt-BR ======
+    if (window.kendo && kendo.culture) { kendo.culture("pt-BR"); }
+
+    // ====== Colunas (mapeadas à sua API) ======
+    var baseColumns = [
+        { field:"cliente",     title:"Cliente",      width: 360 },
+        { field:"estab",       title:"Estab",        width: 100 },
+        { field:"dt_emissao",  title:"Emissão",      width: 140, format: "{0:dd/MM/yyyy}" },
+        { field:"serie",       title:"Série",        width: 90  },
+        { field:"documento",   title:"Documento",    width: 140 },
+        { field:"natureza",    title:"Natureza",     width: 240 },
+        { field:"dt_transacao",title:"Transação",    width: 140, format: "{0:dd/MM/yyyy}" },
+        { field:"vl_nota",     title:"Valor Nota",   width: 140, format: "{0:c}" }
+    ];
+
+    var currentMobileMode = true; // true | "phone" | false
+
+    function buildGrid(){
+        var old = $("#grid").data("kendoGrid");
+        if (old) { old.destroy(); $("#grid").empty(); }
+
+        $("#grid").kendoGrid({
+            dataSource: {
+                transport: {
+                    read: {
+                        url: "http://erp.imatextil.com.br:82/api/rep/v1/get-devolucao-venda?estab=505&dt_ini=2025-09-01",     // <<< TROQUE PELA SUA URL
+                        dataType: "json",
+                        type: "GET",
+                        headers: {
+                            "Authorization": "Basic c3VwZXI6c3VwZXI=",
+                            "Accept": "application/json"
+                        }
+                    }
+                },
+                // Onde estão os dados dentro do JSON
+                schema: {
+                    data: "ttResult",
+                    total: function(resp){ return (resp && resp.ttResult) ? resp.ttResult.length : 0; },
+                    // Converte datas "YYYY-MM-DD" p/ Date antes do binding
+                    parse: function(resp){
+                        if (resp && resp.ttResult && resp.ttResult.forEach){
+                            resp.ttResult.forEach(function(r){
+                                if (r.dt_emissao && typeof r.dt_emissao === "string"){
+                                    var d = kendo.parseDate(r.dt_emissao, ["yyyy-MM-dd","yyyy/MM/dd"]);
+                                    if (d) r.dt_emissao = d;
+                                }
+                                if (r.dt_transacao && typeof r.dt_transacao === "string"){
+                                    var d2 = kendo.parseDate(r.dt_transacao, ["yyyy-MM-dd","yyyy/MM/dd"]);
+                                    if (d2) r.dt_transacao = d2;
+                                }
+                            });
+                        }
+                        return resp;
+                    },
+                    model: {
+                        id: "documento", // ajuste se houver outro identificador único
+                        fields: {
+                            cliente:      { type: "string" },
+                            estab:        { type: "string" },
+                            dt_emissao:   { type: "date"   },
+                            serie:        { type: "string" },
+                            documento:    { type: "string" },
+                            natureza:     { type: "string" },
+                            dt_transacao: { type: "date"   },
+                            vl_nota:      { type: "number" }
+                        }
+                    }
+                },
+                pageSize: 50,
+                serverPaging: false,
+                serverSorting: false,
+                serverFiltering: false
+            },
+            height: 520,
+            pageable: true,
+            sortable: true,
+            filterable: true,
+            resizable: true,
+            reorderable: true,
+            columnMenu: true,
+            selectable: "row",
+            mobile: currentMobileMode,
+            columns: baseColumns,
+            dataBound: function(){ applyResponsive(); }
+        });
+    }
+
+    // ====== Responsividade (2018-friendly) ======
+    var breakpoints = [
+        { max: 420, show: ["cliente","vl_nota"] },
+        { max: 640, show: ["cliente","vl_nota","documento"] },
+        { max: 900, show: ["cliente","vl_nota","documento","dt_emissao","estab"] },
+        { max: Infinity, show: baseColumns.map(function(c){ return c.field; }) }
+    ];
+
+    function applyResponsive(){
+        var grid = $("#grid").data("kendoGrid");
+        if (!grid) return;
+
+        var w = $("#wrapper").width();
+        var rule = breakpoints.find(function(b){ return w < b.max; });
+
+        var showSet = {};
+        rule.show.forEach(function(f){ showSet[f] = true; });
+
+        baseColumns.forEach(function(col){
+            var f = col.field; if (!f) return;
+            if (showSet[f]) { try { grid.showColumn(f); } catch(e){} }
+            else            { try { grid.hideColumn(f); } catch(e){} }
+        });
+    }
+
+    function debounce(fn, ms){ var t; return function(){ clearTimeout(t); t=setTimeout(fn,ms);} }
+    var onResize = debounce(applyResponsive, 120);
+
+    // ====== Leitura da seleção (todas as colunas, inclusive ocultas) ======
+    function readSelectedAllColumns(){
+        var grid = $("#grid").data("kendoGrid");
+        if (!grid) return null;
+
+        var $tr = grid.select();
+        if (!$tr || !$tr.length) return null;
+
+        var item = grid.dataItem($tr[0]);
+        var fieldsMeta = ((((grid.dataSource||{}).options||{}).schema||{}).model||{}).fields || {};
+
+        var raw = {}, formatted = {}, seen = {};
+
+        // 1) processa colunas declaradas (inclui hidden)
+        (grid.columns || []).forEach(function(col){
+            if (!col || !col.field) return;
+            var f = col.field, t = (fieldsMeta[f] && fieldsMeta[f].type) || null;
+            var val = item[f];
+
+            raw[f] = val; seen[f] = true;
+
+            if (col.format) {
+                formatted[col.title || f] = kendo.toString(val, col.format);
+            } else if (t === "date" && val instanceof Date) {
+                formatted[col.title || f] = kendo.toString(val, "dd/MM/yyyy");
+            } else if (t === "number" && typeof val === "number") {
+                formatted[col.title || f] = kendo.toString(val, "n2");
+            } else {
+                formatted[col.title || f] = val;
+            }
+        });
+
+        // 2) inclui quaisquer outros campos do item
+        var obj = item.toJSON ? item.toJSON() : item;
+        for (var k in obj) {
+            if (!obj.hasOwnProperty(k)) continue;
+            if (seen[k]) continue;
+            var val = obj[k];
+            raw[k] = val;
+
+            var meta = fieldsMeta[k] || {};
+            if (meta.type === "date" && val instanceof Date) {
+                formatted[k] = kendo.toString(val, "dd/MM/yyyy");
+            } else if (meta.type === "number" && typeof val === "number") {
+                formatted[k] = kendo.toString(val, "n2");
+            } else {
+                formatted[k] = val;
+            }
+        }
+
+        return { raw: raw, formatted: formatted, dataItem: obj };
+    }
+
+    // ====== UI ======
+    $("#wRange").on("input change", function(){
+        var v = +this.value;
+        $("#wLabel").text(v + "px");
+        $("#wrapper").css("width", v + "px");
+        onResize();
+    });
+
+    $("#forcePhone").on("click", function(){
+        currentMobileMode = "phone";
+        buildGrid(); applyResponsive();
+    });
+
+    $("#forceAuto").on("click", function(){
+        currentMobileMode = true;
+        buildGrid(); applyResponsive();
+    });
+
+    $("#btnReload").on("click", function(){
+        var grid = $("#grid").data("kendoGrid");
+        if (grid) grid.dataSource.read();
+    });
+
+    $("#btnReadAll").on("click", function(){
+        var grid = $("#grid").data("kendoGrid");
+        var res = readSelectedAllColumns();
+        if (!res) { alert("Nenhuma linha selecionada."); return; }
+
+        var page       = grid.dataSource.page();
+        var pageSize   = grid.dataSource.pageSize();
+        var totalPages = grid.dataSource.totalPages();
+
+        var msg =
+            "PÁGINA ATUAL: " + page + " / " + totalPages +
+            "\nTamanho da página: " + pageSize +
+            "\n\nVALORES BRUTOS (campos)\n" + JSON.stringify(res.raw, null, 2) +
+            "\n\nVALORES FORMATADOS (títulos ou campos)\n" + JSON.stringify(res.formatted, null, 2);
+
+        var wnd = $("#resultWindow").data("kendoWindow");
+        if (!wnd){
+            $("#resultWindow").kendoWindow({
+                title: "Linha selecionada — valores",
+                modal: true, width: "720px", height: "520px",
+                actions: ["Maximize","Close"]
+            });
+            wnd = $("#resultWindow").data("kendoWindow");
+        }
+        $("#resultPre").text(msg);
+        wnd.center().open();
+    });
+
+    window.addEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+
+    // ====== START ======
+    buildGrid();
+    applyResponsive();
+</script>
+</body>
+</html>
