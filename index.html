@@ -171,11 +171,14 @@
             width: 265,
             swipeToOpen: true,
             template: function (item) {
-                if (item.separator) {
-                    return `<div style="padding: 10px 16px; font-weight: bold; color: #374151;">${item.text}</div>`;
+                const safeItem = item || {};
+                if (safeItem.separator) {
+                    return `<div style="padding: 10px 16px; font-weight: bold; color: #374151;">${safeItem.text || ""}</div>`;
                 }
-                const css = item.cssClass ? " " + item.cssClass : "";
-                return `<span class="k-icon k-i-${item.icon || "folder"}"></span><span class="k-item-text${css}">${item.text}</span>`;
+                const css = safeItem.cssClass ? " " + safeItem.cssClass : "";
+                const icon = safeItem.icon || "folder";
+                const text = safeItem.text || "";
+                return `<span class="k-icon k-i-${icon}"></span><span class="k-item-text${css}">${text}</span>`;
             },
             itemClick: function (e) {
                 const route = $(e.item).data("route");
