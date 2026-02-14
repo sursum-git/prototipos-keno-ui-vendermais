@@ -1,0 +1,257 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sistema ERP</title>
+
+    <link rel="stylesheet" href="kendo/styles/default-main.css" />
+
+    <style>
+        html, body {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+        }
+
+        #app {
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #layout-wrap {
+            flex: 1;
+            min-height: 0;
+        }
+
+        #conteudo {
+            height: 100%;
+            box-sizing: border-box;
+            overflow: auto;
+            padding: 20px;
+            background: #f3f4f6;
+        }
+
+        .titulo-rota {
+            margin: 0 0 8px;
+            font-size: 24px;
+            color: #111827;
+        }
+
+        .texto-rota {
+            margin: 0;
+            color: #4b5563;
+            font-size: 15px;
+        }
+
+        .k-drawer-item.grupo {
+            pointer-events: none;
+            opacity: 1;
+            font-weight: bold;
+            color: #374151;
+            background: #eef0f3;
+        }
+
+        .k-drawer-item.submenu {
+            padding-left: 28px;
+        }
+    </style>
+</head>
+<body>
+<div id="app">
+    <div id="topo"></div>
+    <div id="layout-wrap">
+        <div id="lateral">
+            <div id="conteudo"></div>
+        </div>
+    </div>
+</div>
+
+<script src="kendo/js/jquery-4.0.0.min.js"></script>
+<script src="kendo/js/kendo.all.min.js"></script>
+<script>
+    const menuItems = [
+        { text: "Dashboard", icon: "home", route: "#/dashboard" },
+
+        { text: "Cadastros", isGroup: true },
+        { text: "Clientes", icon: "user", route: "#/cadastros/clientes", cssClass: "submenu" },
+        { text: "Produtos", icon: "cart", route: "#/cadastros/produtos", cssClass: "submenu" },
+
+        { text: "Financeiro", isGroup: true },
+        { text: "Contas a Receber", icon: "dollar", route: "#/financeiro/contas-receber", cssClass: "submenu" },
+        { text: "Contas a Pagar", icon: "track-changes", route: "#/financeiro/contas-pagar", cssClass: "submenu" },
+
+        { text: "Relatórios", isGroup: true },
+        { text: "Faturamento", icon: "chart-column-clustered", route: "#/relatorios/faturamento", cssClass: "submenu" }
+    ];
+
+    const routeMap = {
+        "#/dashboard": {
+            titulo: "Dashboard",
+            texto: "Bem-vindo ao painel principal do Sistema ERP."
+        },
+        "#/cadastros/clientes": {
+            titulo: "Cadastros / Clientes",
+            texto: "Área para gestão de clientes."
+        },
+        "#/cadastros/produtos": {
+            titulo: "Cadastros / Produtos",
+            texto: "Área para gestão de produtos."
+        },
+        "#/financeiro/contas-receber": {
+            titulo: "Financeiro / Contas a Receber",
+            texto: "Consulta e controle dos recebimentos."
+        },
+        "#/financeiro/contas-pagar": {
+            titulo: "Financeiro / Contas a Pagar",
+            texto: "Consulta e controle dos pagamentos."
+        },
+        "#/relatorios/faturamento": {
+            titulo: "Relatórios / Faturamento",
+            texto: "Relatório de faturamento da empresa."
+        },
+        "#/login": {
+            titulo: "Login",
+            texto: "Você saiu do sistema. Faça login novamente."
+        }
+    };
+
+    function renderRoute(hash) {
+        const rota = routeMap[hash] || {
+            titulo: "Página não encontrada",
+            texto: "A rota informada não existe no sistema."
+        };
+
+        $("#conteudo").html(`
+            <h1 class="titulo-rota">${rota.titulo}</h1>
+            <p class="texto-rota">${rota.texto}</p>
+        `);
+
+        sincronizarSelecao(hash);
+    }
+
+    function obterItensDrawer() {
+        return $("#lateral").find(".k-drawer-item");
+    }
+
+    function sincronizarSelecao(hash) {
+        const drawer = $("#lateral").data("kendoDrawer");
+        if (!drawer) return;
+
+        const itens = obterItensDrawer();
+        itens.removeClass("k-selected");
+
+        itens.each(function () {
+            const item = $(this);
+            const route = item.attr("data-route");
+            if (route && route === hash) {
+                item.addClass("k-selected");
+            }
+        });
+    }
+
+    function atualizarModoDrawer() {
+        const drawer = $("#lateral").data("kendoDrawer");
+        if (!drawer) return;
+
+        const mobile = window.matchMedia("(max-width: 768px)").matches;
+        drawer.setOptions({ mode: mobile ? "overlay" : "push" });
+
+        if (!mobile) {
+            drawer.show();
+        }
+    }
+
+    $(function () {
+        $("#topo").kendoAppBar({
+            themeColor: "inherit",
+            items: [
+                { type: "contentItem", template: '<button id="btnMenu"></button>' },
+                { type: "spacer", width: 14 },
+                { type: "contentItem", template: '<strong style="font-size: 18px;">Sistema ERP</strong>' },
+                { type: "spacer" },
+                { type: "contentItem", template: '<button id="btnSair">Sair</button>' }
+            ]
+        });
+
+        $("#btnMenu").kendoButton({ icon: "menu" });
+        $("#btnSair").kendoButton({ icon: "logout" });
+
+        $("#lateral").kendoDrawer({
+            width: 280,
+            mode: "push",
+            mini: false,
+            swipeToOpen: true,
+            content: $("#conteudo"),
+            items: menuItems,
+            template: function(item) {
+                const safe = item || {};
+                const text = safe.text || "";
+                const icon = safe.icon || "folder";
+                return `<span class="k-icon k-i-${icon}"></span><span class="k-item-text">${text}</span>`;
+            },
+            itemClick: function(e) {
+                const route = $(e.item).attr("data-route");
+                if (!route) {
+                    return;
+                }
+
+                location.hash = route;
+
+                if (window.matchMedia("(max-width: 768px)").matches) {
+                    this.hide();
+                }
+            }
+        });
+
+        const drawer = $("#lateral").data("kendoDrawer");
+
+        obterItensDrawer().each(function(index) {
+            const conf = menuItems[index];
+            if (!conf) return;
+
+            if (conf.route) {
+                $(this).attr("data-route", conf.route);
+            }
+
+            if (conf.cssClass) {
+                $(this).addClass(conf.cssClass);
+            }
+
+            if (conf.isGroup) {
+                $(this).addClass("grupo");
+                $(this).html(`<span class="k-item-text">${conf.text}</span>`);
+            }
+        });
+
+        $("#btnMenu").on("click", function() {
+            drawer.toggle();
+        });
+
+        $("#btnSair").on("click", function() {
+            location.hash = "#/login";
+            renderRoute("#/login");
+        });
+
+        $(window).on("hashchange", function() {
+            renderRoute(location.hash);
+        });
+
+        $(window).on("resize", function() {
+            atualizarModoDrawer();
+        });
+
+        atualizarModoDrawer();
+
+        if (!location.hash) {
+            location.hash = "#/dashboard";
+        } else {
+            renderRoute(location.hash);
+        }
+    });
+</script>
+</body>
+</html>
