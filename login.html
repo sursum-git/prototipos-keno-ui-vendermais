@@ -1,184 +1,137 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-    <meta charset="utf-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Portal V+</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Login | Portal V+</title>
 
-    <link href="kendo/styles/default-main.css"   rel="stylesheet" />
-    <script src="kendo/js/jquery-4.0.0.min.js" ></script>
-    <script src="kendo/js/kendo.all.min.js" ></script>
-    <script src="license-kendo.js" ></script>
+    <link href="kendo/styles/default-main.css" rel="stylesheet" />
+    <script src="kendo/js/jquery-4.0.0.min.js"></script>
+    <script src="kendo/js/kendo.all.min.js"></script>
+    <script src="license-kendo.js"></script>
+    <script src="kendo/js/cultures/kendo.culture.pt-BR.min.js"></script>
 
     <style>
-        * { box-sizing: border-box; }
-
-        body{
-            margin:0;
-            min-height:100vh;
-            display:flex;
-            justify-content:center;
-            align-items:center;
-            background:#f2f3f5;
-            font-family:Arial, Helvetica, sans-serif;
+        * {
+            box-sizing: border-box;
         }
 
-        .container{
-            width:760px;
-            max-width:95%;
+        body {
+            margin: 0;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 16px;
+            background: #f3f4f6;
+            font-family: Arial, Helvetica, sans-serif;
         }
 
-        .header{
-            display:flex;
-            align-items:center;
-            gap:20px;
-            margin-bottom:28px;
+        .login-card {
+            width: 100%;
+            max-width: 380px;
+            padding: 28px;
+            border-radius: 16px;
+            background: #ffffff;
+            box-shadow: 0 16px 40px rgba(0, 0, 0, 0.08);
         }
 
-        .logo{
-            width:90px;
-            height:90px;
-            border:1px dashed #bbb;
-            border-radius:16px;
-            display:flex;
-            align-items:center;
-            justify-content:center;
-            background:#fff;
-            font-size:14px;
-            user-select:none;
+        .titulo {
+            margin: 0 0 20px;
+            font-size: 24px;
+            text-align: center;
         }
 
-        .card{
-            background:#fff;
-            padding:45px;
-            border-radius:20px;
-            box-shadow:0 20px 45px rgba(0,0,0,0.08);
-            display:flex;
-            justify-content:center;
+        .campo {
+            margin-bottom: 14px;
         }
 
-        /* Aqui manda no tamanho de tudo */
-        .form-box{
-            width:480px;       /* ajuste aqui se quiser */
-            max-width:100%;
+        .campo label {
+            display: block;
+            margin-bottom: 6px;
+            font-weight: 600;
         }
 
-        .field{ margin-bottom:24px; }
-
-        .label{
-            display:block;
-            margin-bottom:10px;
-            font-size:18px;
-            font-weight:700;
-        }
-
-        /* AQUI é o pulo do gato:
-           força TextBox wrapper e Button a serem blocos de 100% (mesma largura real)
-        */
-        .form-box .k-input,
-        .form-box .k-textbox,
-        .form-box .k-button{
-            width:100% !important;
-            display:block !important;
-            box-sizing:border-box !important;
-        }
-
-        /* deixa o conteúdo grande sem mexer em altura fixa */
-        .k-input-inner{
-            font-size:18px !important;
-            padding:14px !important;
-        }
-        .k-button{
-            font-size:18px !important;
-            padding:16px !important;
-        }
-
-        .link-row{
-            text-align:center;
-            margin-top:18px;
+        .login-card .k-textbox,
+        .login-card .k-button {
+            width: 100% !important;
+            display: block !important;
         }
     </style>
 </head>
-
 <body>
-<div class="container">
+    <main class="login-card">
+        <h1 class="titulo">Acesso ao sistema</h1>
 
-    <div class="header">
-        <div class="logo">LOGO</div>
-        <div>
-            <h1 style="margin:0;font-size:36px;">Portal V+</h1>
-            <div style="font-size:18px;color:#666;">Acesso ao sistema</div>
-        </div>
-    </div>
-
-    <div class="card">
-        <div class="form-box">
-
-            <div class="field">
-                <label class="label" for="usuario">Usuário</label>
-                <input id="usuario"/>
+        <form id="formLogin" novalidate>
+            <div class="campo">
+                <label for="usuario">Usuário</label>
+                <input id="usuario" name="usuario" />
             </div>
 
-            <div class="field">
-                <label class="label" for="senha">Senha</label>
-                <input id="senha"/>
+            <div class="campo">
+                <label for="senha">Senha</label>
+                <input id="senha" name="senha" />
             </div>
 
-            <button id="btnEntrar">Entrar</button>
+            <button id="btnEntrar" type="submit">Entrar</button>
+        </form>
+    </main>
 
-            <div class="link-row">
-                <a href="#" id="lnkEsqueci" style="font-size:16px;text-decoration:none;">
-                    Esqueci minha senha
-                </a>
-            </div>
+    <div id="erroDialog"></div>
 
-        </div>
-    </div>
+    <script>
+        const KENDO_VERSION = "2025.4.1321";
+        const USE_REMOTE = false;
 
-</div>
+        kendo.culture("pt-BR");
 
-<script>
-    $(function(){
+        $(function () {
+            const usuario = $("#usuario").kendoTextBox({
+                placeholder: "Digite seu usuário"
+            }).data("kendoTextBox");
 
-        const usuario = $("#usuario").kendoTextBox({
-            placeholder:"Digite seu usuário",
-            size:"large"
-        }).data("kendoTextBox");
+            const senha = $("#senha").kendoTextBox({
+                placeholder: "Digite sua senha",
+                inputType: "password"
+            }).data("kendoTextBox");
 
-        const senha = $("#senha").kendoTextBox({
-            placeholder:"Digite sua senha",
-            inputType:"password",
-            size:"large"
-        }).data("kendoTextBox");
+            $("#btnEntrar").kendoButton({
+                themeColor: "primary"
+            });
 
-        const btn = $("#btnEntrar").kendoButton({
-            themeColor:"primary",
-            size:"large",
-            click: function(){
-                const u = (usuario.value() || "").trim();
-                const s = (senha.value() || "");
-                if(!u || !s){
-                    kendo.alert("Informe usuário e senha.");
+            const dialog = $("#erroDialog").kendoDialog({
+                title: "Falha no login",
+                content: "",
+                modal: true,
+                visible: false,
+                actions: [{ text: "OK", primary: true }]
+            }).data("kendoDialog");
+
+            function mostrarErro(mensagem) {
+                dialog.content(`<p>${kendo.htmlEncode(mensagem)}</p>`);
+                dialog.open();
+            }
+
+            $("#formLogin").on("submit", function (evento) {
+                evento.preventDefault();
+
+                const valorUsuario = (usuario.value() || "").trim();
+                const valorSenha = senha.value() || "";
+
+                if (!valorUsuario || !valorSenha) {
+                    mostrarErro("Usuário e senha são obrigatórios.");
                     return;
                 }
-                kendo.alert("Login OK (protótipo).");
-            }
-        }).data("kendoButton");
 
-        // GARANTIA EXTRA: força largura no wrapper criado pelo Kendo
-        // TextBox
-        usuario.wrapper.css({ width:"100%", display:"block" });
-        senha.wrapper.css({ width:"100%", display:"block" });
+                if (valorUsuario !== "admin" || valorSenha !== "123") {
+                    mostrarErro("Usuário ou senha inválidos.");
+                    return;
+                }
 
-        // Button (no Kendo atual existe wrapper; se não existir, cai no próprio elemento)
-        (btn.wrapper ? btn.wrapper : $("#btnEntrar")).css({ width:"100%", display:"block" });
-
-        $("#lnkEsqueci").on("click", function(e){
-            e.preventDefault();
-            kendo.alert("Recuperação de senha (protótipo).");
+                window.location.hash = "/app";
+            });
         });
-
-    });
-</script>
+    </script>
 </body>
 </html>
