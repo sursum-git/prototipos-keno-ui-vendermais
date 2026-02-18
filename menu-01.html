@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Portal V+</title>
+
+    <link href="kendo/styles/default-main.css"   rel="stylesheet" />
+    <script src="kendo/js/jquery-4.0.0.min.js" ></script>
+    <script src="kendo/js/kendo.all.min.js" ></script>
+    <script src="license-kendo.js" ></script>
+    <script src="kendo/js/cultures/kendo.culture.pt-BR.min.js" ></script>
+    <script>
+        kendo.culture("pt-BR");
+    </script>
+    <script src="datasources.js"></script>
+
+ </head>
+ <body>
+ <ul id="menu">
+ </ul>
+ <script>
+     $(document).ready(function() {
+         $("#menu").kendoMenu({
+             dataSource: localDataSource,
+         });
+     });
+
+
+
+ </script>
+ </body>
+ </html>

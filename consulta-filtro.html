@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Filtro de Consulta</title>
+
+    <link href="kendo/styles/default-main.css" rel="stylesheet" />
+    <script src="kendo/js/jquery-4.0.0.min.js"></script>
+
+    <script>
+        (function ($) {
+            const _contains = $.contains;
+            $.contains = function (a, b) {
+                if (!b) return false;
+                if (!a) a = document.documentElement;
+                return _contains(a, b);
+            };
+        })(jQuery);
+    </script>
+
+    <script src="kendo/js/kendo.all.min.js"></script>
+    <script src="license-kendo.js"></script>
+    <script src="kendo/js/cultures/kendo.culture.pt-BR.min.js"></script>
+
+    <style>
+        html, body { height:100%; margin:0; }
+        body { background:#f6f7fb; }
+
+        #page-root { min-height:100%; display:flex; flex-direction:column; }
+        .page-header{
+            padding:14px 16px;
+            background:#fff;
+            border-bottom:1px solid rgba(0,0,0,.08);
+            position:sticky;
+            top:0;
+            z-index:5;
+        }
+        .page-title{
+            display:flex;
+            gap:12px;
+            align-items:flex-end;
+            justify-content:space-between;
+            flex-wrap:wrap;
+        }
+        .page-title h1{
+            margin:0;
+            font-size:18px;
+            font-weight:800;
+        }
+        .entry-time{
+            opacity:.75;
+            font-size:12px;
+            white-space:nowrap;
+        }
+
+        .page-body{
+            padding:14px 16px 86px;
+            flex:1;
+        }
+
+        .card{
+            background:#fff;
+            border:1px solid rgba(0,0,0,.08);
+            border-radius:14px;
+            padding:14px;
+            box-shadow:0 4px 14px rgba(0,0,0,.05);
+        }
+
+        .grid-form{
+            display:grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap:12px;
+        }
+        .field{ grid-column: span 12; }
+        .field label{
+            display:block;
+            font-size:12px;
+            opacity:.8;
+            margin:0 0 6px;
+            font-weight:700;
+        }
+
+        @media (min-width: 720px){
+            .field.col-3 { grid-column: span 3; }
+            .field.col-4 { grid-column: span 4; }
+            .field.col-6 { grid-column: span 6; }
+            .field.col-8 { grid-column: span 8; }
+            .field.col-12 { grid-column: span 12; }
+        }
+
+        .bottom-bar{
+            position:fixed;
+            left:0; right:0; bottom:0;
+            background:#fff;
+            border-top:1px solid rgba(0,0,0,.10);
+            padding:10px 12px;
+            z-index:20;
+        }
+        .bottom-inner{
+            display:flex;
+            gap:10px;
+            align-items:center;
+            justify-content:flex-start; /* botões à esquerda */
+            max-width:1200px;
+            margin:0 auto;
+        }
+
+        .hint{
+            font-size:12px;
+            opacity:.75;
+            margin:10px 0 0;
+        }
+    </style>
+</head>
+
+<body>
+<div id="page-root">
+    <div class="page-header">
+        <div class="page-title">
+            <h1>Filtro de Consulta</h1>
+            <div class="entry-time">
+                Entrada: <span id="entryTime"></span>
+            </div>
+        </div>
+
+    </div>
+
+    <div class="page-body">
+        <div class="card">
+            <div class="grid-form">
+
+                <div class="field col-6">
+                    <label for="fTexto">Texto (contém)</label>
+                    <input id="fTexto" />
+                </div>
+
+                <div class="field col-3">
+                    <label for="fCnpj">CNPJ (mask)</label>
+                    <input id="fCnpj" />
+                </div>
+
+                <div class="field col-3">
+                    <label for="fValorMin">Valor mínimo</label>
+                    <input id="fValorMin" />
+                </div>
+
+                <div class="field col-3">
+                    <label for="fDtIni">Data início</label>
+                    <input id="fDtIni" />
+                </div>
+
+                <div class="field col-3">
+                    <label for="fDtFim">Data fim</label>
+                    <input id="fDtFim" />
+                </div>
+
+                <div class="field col-3">
+                    <label for="fStatus">Status</label>
+                    <input id="fStatus" />
+                </div>
+
+                <div class="field col-3">
+                    <label for="fVendedor">Vendedor</label>
+                    <input id="fVendedor" />
+                </div>
+
+                <div class="field col-6">
+                    <label for="fTags">Tags</label>
+                    <input id="fTags" />
+                </div>
+
+                <div class="field col-3">
+                    <label for="fSomenteAtivos">Somente ativos</label>
+                    <input id="fSomenteAtivos" />
+                </div>
+
+                <div class="field col-3">
+                    <label>&nbsp;</label>
+                    <input id="fIncluirArquivados" />
+                </div>
+
+                <div class="field col-6">
+                    <label>Prioridade</label>
+                    <div id="fPrioridade"></div>
+                </div>
+
+                <div class="field col-6">
+                    <label for="fScore">Score (0 a 100)</label>
+                    <input id="fScore" type="range" />
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <div class="bottom-bar">
+        <div class="bottom-inner">
+            <button id="btnPesquisar">Pesquisar</button>
+        </div>
+    </div>
+</div>
+
+<script src="consulta-filtro.js"></script>
+<script>
+    if (window.consulta_filtro_init) window.consulta_filtro_init();
+</script>
+</body>
+</html>

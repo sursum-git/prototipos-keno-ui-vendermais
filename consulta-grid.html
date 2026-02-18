@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Protótipo Grid - Stacked Display Mode (Compacto no Desktop)</title>
+
+    <link href="kendo/styles/default-main.css" rel="stylesheet" />
+
+    <script src="kendo/js/jquery-3.7.1.min.js"></script>
+    <script src="kendo/js/kendo.all.min.js"></script>
+    <script src="license-kendo.js"></script>
+    <script src="kendo/js/cultures/kendo.culture.pt-BR.min.js"></script>
+
+    <style>
+        html, body { height:100%; margin:0; }
+        body { padding:14px; }
+
+        .topbar{
+            display:flex; gap:10px; flex-wrap:wrap; align-items:center;
+            margin: 0 0 12px;
+        }
+        .hint { font-size:12px; opacity:.75; margin: 0; }
+
+        /* WRAPPER que segura scroll horizontal quando necessário */
+        .grid-wrap{
+            width: 100%;
+            overflow-x: auto;          /* <- scroll horizontal se passar do viewport */
+            overflow-y: visible;
+            padding-bottom: 6px;       /* dá espaço pro scroll não “colar” */
+        }
+
+        /* O truque do “menor tamanho possível” no desktop */
+        #grid{
+            display: inline-block;     /* <- para de ocupar 100% */
+            vertical-align: top;
+        }
+        .k-grid{
+            width: auto !important;    /* <- respeita soma das colunas */
+        }
+
+        /* só pra ficar mais “enxuto” */
+        .k-button { cursor:pointer; }
+    </style>
+</head>
+
+<body>
+<div class="topbar">
+    <button id="btnAuto" class="k-button k-button-md k-rounded-md k-button-solid k-button-solid-base">Auto (por largura)</button>
+    <button id="btnColumns" class="k-button k-button-md k-rounded-md k-button-solid k-button-solid-base">Forçar Columns</button>
+    <button id="btnStacked" class="k-button k-button-md k-rounded-md k-button-solid k-button-solid-base">Forçar Stacked</button>
+    <p class="hint" id="info"></p>
+</div>
+
+<div class="grid-wrap">
+    <div id="grid"></div>
+</div>
+
+<script>
+    kendo.culture("pt-BR");
+
+    // --------- DADOS FAKES ----------
+    const data = [
+        {
+            id: 1,
+            codProd: "P-0001",
+            descProd: "Produto A - Tecido Algodão 1,60m",
+            un: "MT",
+            prontaQt: 120,
+            programadoQt: 300,
+            primeiraChegada: new Date(2026, 1, 25),
+            pe_padrao: 19.90,
+            pe_promocao: 17.90,
+            pe_rubi: 18.90,
+            pe_safira: 18.50,
+            pi_padrao: 20.50,
+            pi_rubi: 19.70
+        },
+        {
+            id: 2,
+            codProd: "P-0014",
+            descProd: "Produto B - Malha Poliéster 180g",
+            un: "KG",
+            prontaQt: 0,
+            programadoQt: 850,
+            primeiraChegada: new Date(2026, 2, 3),
+            pe_padrao: 12.40,
+            pe_promocao: 11.10,
+            pe_rubi: 11.80,
+            pe_safira: 11.60,
+            pi_padrao: 12.90,
+            pi_rubi: 12.10
+        },
+        {
+            id: 3,
+            codProd: "P-0022",
+            descProd: "Produto C - Fio 30/1 Penteado",
+            un: "CX",
+            prontaQt: 44,
+            programadoQt: 120,
+            primeiraChegada: new Date(2026, 1, 19),
+            pe_padrao: 89.00,
+            pe_promocao: 82.00,
+            pe_rubi: 85.00,
+            pe_safira: 84.00,
+            pi_padrao: 90.00,
+            pi_rubi: 86.50
+        }
+    ];
+
+    // --------- GRID ----------
+    function initGrid() {
+        const $grid = $("#grid");
+
+        // destruição segura (uma vez só)
+        kendo.destroy($grid);
+        $grid.empty();
+
+        $grid.kendoGrid({
+            dataSource: {
+                data,
+                pageSize: 10,
+                schema: {
+                    model: {
+                        id: "id",
+                        fields: {
+                            codProd: { type: "string" },
+                            descProd: { type: "string" },
+                            un: { type: "string" },
+                            prontaQt: { type: "number" },
+                            programadoQt: { type: "number" },
+                            primeiraChegada: { type: "date" },
+                            pe_padrao: { type: "number" },
+                            pe_promocao: { type: "number" },
+                            pe_rubi: { type: "number" },
+                            pe_safira: { type: "number" },
+                            pi_padrao: { type: "number" },
+                            pi_rubi: { type: "number" }
+                        }
+                    }
+                }
+            },
+
+            // Se você quiser altura “livre”, remova isso.
+            height: 540,
+
+            pageable: true,
+            sortable: true,
+            filterable: true,
+            resizable: true,
+            selectable: "row",
+            toolbar: ["search"],
+
+            // IMPORTANTE: scroll horizontal ligado
+            scrollable: { horizontal: true },
+
+            // começa em modo normal
+            dataLayoutMode: "columns",
+
+            // larguras definidas = grid compacto previsível
+            columns: [
+                { field: "codProd", title: "Código (Produto)", width: 140 },
+                { field: "descProd", title: "Descrição (Produto)", width: 320 },
+                { field: "un", title: "Un. (Unidade Medida)", width: 170 },
+                { field: "prontaQt", title: "Pronta Entrega (Qt.)", width: 190, format: "{0:n0}" },
+                { field: "programadoQt", title: "Programado (Qt.)", width: 170, format: "{0:n0}" },
+                { field: "primeiraChegada", title: "1ª Chegada (Data)", width: 160, format: "{0:dd/MM/yyyy}" },
+
+                {
+                    title: "Preços - Pronta Entrega",
+                    columns: [
+                        { field: "pe_padrao", title: "Padrão", width: 120, format: "{0:c2}" },
+                        { field: "pe_promocao", title: "Promoção", width: 120, format: "{0:c2}" },
+                        { field: "pe_rubi", title: "Rubi", width: 120, format: "{0:c2}" },
+                        { field: "pe_safira", title: "Safira", width: 120, format: "{0:c2}" }
+                    ]
+                },
+
+                {
+                    title: "Preços - PI",
+                    columns: [
+                        { field: "pi_padrao", title: "Padrão", width: 120, format: "{0:c2}" },
+                        { field: "pi_rubi", title: "Rubi", width: 120, format: "{0:c2}" }
+                    ]
+                }
+            ]
+        });
+
+        $("#info").text("Kendo: " + (window.kendo ? kendo.version : "não carregou"));
+    }
+
+    initGrid();
+
+    // --------- TROCA DE LAYOUT (SEM LOOP) ----------
+    let mode = "auto";        // auto | columns | stacked
+    let currentLayout = null; // columns | stacked
+    const BREAKPOINT = 900;
+
+    function wantStacked() {
+        if (mode === "stacked") return true;
+        if (mode === "columns") return false;
+
+        // usa largura real do wrapper (melhor que matchMedia)
+        return $(".grid-wrap").width() < BREAKPOINT;
+    }
+
+    function applyLayoutIfChanged() {
+        const g = $("#grid").data("kendoGrid");
+        if (!g) return;
+
+        const next = wantStacked() ? "stacked" : "columns";
+        if (currentLayout === next) return; // trava (não recria em loop)
+        currentLayout = next;
+
+        if (next === "stacked") {
+            g.setOptions({
+                dataLayoutMode: "stacked",
+                stackedLayoutSettings: { cols: 1 }
+            });
+        } else {
+            g.setOptions({
+                dataLayoutMode: "columns",
+                scrollable: { horizontal: true } // mantém o comportamento no desktop
+            });
+        }
+    }
+
+    // aplica uma vez
+    applyLayoutIfChanged();
+
+    // resize com throttle (não martela setOptions)
+    $(window).on("resize.gridLayout", kendo.throttle(applyLayoutIfChanged, 200));
+
+    // --------- BOTÕES ----------
+    $("#btnAuto").on("click", function() {
+        mode = "auto";
+        currentLayout = null;
+        applyLayoutIfChanged();
+    });
+
+    $("#btnColumns").on("click", function() {
+        mode = "columns";
+        currentLayout = null;
+        applyLayoutIfChanged();
+    });
+
+    $("#btnStacked").on("click", function() {
+        mode = "stacked";
+        currentLayout = null;
+        applyLayoutIfChanged();
+    });
+</script>
+</body>
+</html>

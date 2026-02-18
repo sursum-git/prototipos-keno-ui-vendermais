@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Portal V+</title>
+
+    <link href="kendo/styles/default-main.css" rel="stylesheet" />
+    <script src="kendo/js/jquery-3.7.1.min.js"></script>
+
+    <script>
+        // Patch para evitar crash do $.contains em algumas combinações Kendo/jQuery
+        (function ($) {
+            const _contains = $.contains;
+            $.contains = function (a, b) {
+                if (!b) return false;
+                if (!a) a = document.documentElement;
+                return _contains(a, b);
+            };
+        })(jQuery);
+    </script>
+
+    <script src="kendo/js/kendo.all.min.js"></script>
+    <script>
+        (function () {
+            if (!window.kendo || !kendo.ui) {
+                console.warn("Kendo não carregado ainda.");
+                return;
+            }
+
+            if (kendo?.ui?.Grid?.fn?.options) {
+                kendo.ui.Grid.fn.options.columnMenu = false;
+            }
+
+
+        })();
+
+    </script>
+    <script src="license-kendo.js"></script>
+    <script src="kendo/js/cultures/kendo.culture.pt-BR.min.js"></script>
+
+    <style>
+        html, body { height:100%; margin:0; overflow:hidden; }
+        .shell { height:100%; display:flex; flex-direction:column; }
+        .layout { height:100%; display:flex; flex-direction:column; min-height:0; }
+
+        #topAppBar { flex:0 0 auto; position:sticky; top:0; z-index:5000; }
+        #appContent{
+            flex:1; min-height:0; overflow:auto; overflow-x:hidden;
+            padding:16px; background:#f5f6f8;
+            opacity: 1; transform: translateX(0);
+        }
+
+        /* ===== Overlay menu ===== */
+        .menu-backdrop{
+            position:fixed; inset:0; background:rgba(0,0,0,.35);
+            display:none; z-index:90000;
+        }
+        .menu-panel{
+            position:fixed; top:0; left:0; height:100%; width:280px; background:#fff;
+            box-shadow:0 10px 30px rgba(0,0,0,.25);
+            transform:translateX(-100%); transition:transform .18s ease;
+            z-index:90001; display:flex; flex-direction:column;
+        }
+        .menu-open .menu-backdrop{ display:block; }
+        .menu-open .menu-panel{ transform:translateX(0); }
+
+        .menu-title{
+            padding:12px; font-weight:700; border-bottom:1px solid rgba(0,0,0,.10);
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        .menu-body{ flex:1; overflow:auto; padding:8px; }
+
+        /* ===== Notificações badge ===== */
+        .notification-wrapper{ position:relative; display:inline-block; overflow:visible; }
+        .notification-badge{
+            position:absolute; top:-6px; right:-6px;
+            background:#d32f2f; color:#fff;
+            font-size:10px; padding:2px 6px; border-radius:12px;
+            min-width:18px; text-align:center;
+            z-index:9999; pointer-events:none;
+            box-sizing:border-box;
+            display:none;
+        }
+
+        /* ⭐ Estrela amarela quando ativa (fallback SVG) */
+        #btnFavOnly.fav-on .k-svg-icon svg,
+        #btnFavOnly.fav-on .k-svg-icon svg * {
+            fill:#f4c400 !important;
+            stroke:#f4c400 !important;
+        }
+
+        /* ✅ Sem isso o AppBar pode cortar o badge */
+        #topAppBar,
+        #topAppBar .k-appbar,
+        #topAppBar .k-appbar-items,
+        #topAppBar .k-appbar-item,
+        #topAppBar .k-appbar-section{
+            overflow: visible !important;
+        }
+
+        #programSearch{ width:320px; }
+        @media (max-width:900px){ #programSearch{ width:220px; } }
+
+        .dash-title{ font-weight:700; margin:0; }
+
+        /* cabeçalho do dashboard com last update */
+        .dash-head{
+            display:flex;
+            align-items:baseline;
+            justify-content:space-between;
+            gap:12px;
+            margin:0 0 12px 0;
+        }
+        .dash-updated{
+            font-size:12px;
+            opacity:.75;
+            white-space:nowrap;
+        }
+
+        /* área do gráfico dentro do tile */
+        .chart-box{ height:150px; padding:8px 10px; }
+        .k-chart{ height:100%; }
+
+        /* header do tile com IMAGEM */
+        .tile-header{ display:flex; align-items:center; gap:10px; font-weight:600; }
+        .tile-logo{ width:22px; height:22px; display:block; }
+
+        /* efeito de entrada dos gráficos */
+        .chart-anim{
+            opacity: 0;
+            transform: translateY(6px) scale(.98);
+            transition: opacity .28s ease, transform .28s ease;
+            will-change: opacity, transform;
+        }
+        .chart-anim.on{ opacity:1; transform:none; }
+
+        /* transição de troca de página */
+        .page-transition-out{
+            opacity: 0;
+            transform: translateX(-8px);
+            transition: opacity .16s ease, transform .16s ease;
+        }
+        .page-transition-in{
+            opacity: 1;
+            transform: translateX(0);
+            transition: opacity .18s ease, transform .18s ease;
+        }
+
+        /* ===== Promo Wizard (MENOR) ===== */
+        .promo-step{
+            padding: 10px 12px; /* menor */
+            line-height: 1.3;
+        }
+        .promo-step h4{
+            margin:0 0 6px 0;
+            font-weight:800;
+            font-size: 15px; /* menor */
+        }
+        .promo-img{
+            width:100%;
+            max-height: 200px; /* menor */
+            object-fit: cover;
+            border-radius: 10px;
+            display:block;
+            margin: 6px 0 8px 0; /* menor */
+        }
+        .promo-text{ opacity: .9; font-size: 13px; }
+        .promo-check{
+            margin-top: 10px;
+            display:flex;
+            align-items:center;
+            gap:8px;
+            font-size:12px;
+            opacity:.85;
+            user-select:none;
+        }
+
+        /* deixa a Window mais "pra cima" no desktop */
+        .promo-window-top .k-window{ top: 64px !important; }
+
+        @media (max-width:768px){
+            .promo-img{ max-height: 40vh; }
+        }
+
+        /* garante que o wizard não empurre os botões pra fora */
+        #promoWindow { overflow: hidden; }
+        #promoWindow .k-wizard { height: 100%; display: flex; flex-direction: column; }
+        #promoWindow .k-wizard-content { flex: 1; overflow: auto; padding-bottom: 10px; }
+        #promoWindow .k-wizard-buttons { flex: 0 0 auto; }
+
+        /* ===== Links do KPI CRM (números) ===== */
+        .crm-kpi-link { cursor: pointer; color: inherit; }
+        .crm-kpi-link:hover{ text-decoration: underline !important; }
+
+        /* ===== Link "Portal V+" ===== */
+        #homeBrand{
+            font-weight:700;
+            text-decoration:none;
+            color:inherit;
+            cursor:pointer;
+        }
+        #homeBrand:hover{ text-decoration: underline; }
+    </style>
+</head>
+
+<body>
+<div class="shell">
+
+    <!-- MENU OVERLAY -->
+    <div id="menuBackdrop" class="menu-backdrop"></div>
+    <div id="menuPanel" class="menu-panel" aria-hidden="true">
+        <div class="menu-title">
+            <span>Menu</span>
+            <button id="btnCloseMenu" title="Fechar"></button>
+        </div>
+        <div class="menu-body">
+            <div id="menuTree"></div>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div class="layout">
+        <div id="topAppBar"></div>
+        <div id="appContent">
+            <h3 class="dash-title">Dashboard</h3>
+            <div id="dashboardTiles"></div>
+        </div>
+    </div>
+
+</div>
+
+<!-- Popup Notificações (com acesso às promoções) -->
+<div id="notificationPopup" style="display:none;">
+    <div style="padding:10px;width:300px;">
+        <strong>Notificações</strong>
+        <hr/>
+        <div style="margin-bottom:8px;">
+            <div>• Pedido aguardando aprovação</div>
+            <div>• Cliente em atraso</div>
+            <div>• Backup concluído</div>
+        </div>
+
+        <hr/>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:10px;">
+            <div style="font-weight:700;">Promoções/avisos: <span id="promoCountInBell">0</span></div>
+            <button id="btnOpenPromosFromBell">Ver</button>
+        </div>
+    </div>
+</div>
+
+<!-- Window Promoções -->
+<div id="promoWindow" style="display:none;"></div>
+
+<script>
+    (function(){
+        kendo.culture("pt-BR");
+        const _loadedScripts = new Set();
+
+        function loadScriptOnce(src){
+            if(_loadedScripts.has(src)) return Promise.resolve();
+
+            return new Promise((resolve, reject) => {
+                const s = document.createElement("script");
+                s.src = src;
+                s.async = false;
+                s.onload = () => { _loadedScripts.add(src); resolve(); };
+                s.onerror = () => reject(new Error("Erro ao carregar script: " + src));
+                document.head.appendChild(s);
+            });
+        }
+
+        // ===== Estado =====
+        let onlyFavorites = false;
+        let notificationCount = 3; // notificações "fixas"
+        let programDs = null;
+        let dashRenderSeq = 0;
+
+        // loader / debounce
+        let dashLoadingTimer = null;
+
+        // ===== Helpers de SVG =====
+        function svgDataUri(svg) {
+            return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg);
+        }
+
+        // ===== Promoções / Avisos =====
+        const promoNews = [
+            {
+                id: "PROMO_2026_01",
+                title: "Promoção de Fevereiro",
+                imgSrc: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700">
+  <defs><linearGradient id="g" x1="0" x2="1"><stop offset="0" stop-color="#0B5FFF"/><stop offset="1" stop-color="#16A34A"/></linearGradient></defs>
+  <rect width="1200" height="700" fill="url(#g)"/>
+  <text x="60" y="160" font-size="72" fill="#fff" font-family="Arial" font-weight="700">FRETE GRÁTIS</text>
+  <text x="60" y="250" font-size="40" fill="#fff" font-family="Arial" opacity=".9">acima de R$ 500 no B2B</text>
+  <rect x="60" y="320" width="520" height="70" rx="18" fill="rgba(255,255,255,.18)"/>
+  <text x="90" y="368" font-size="34" fill="#fff" font-family="Arial">+ 10% em cabos selecionados</text>
+</svg>`),
+                html: "<div class='promo-text'>Aproveite as condições especiais e garanta o melhor custo no seu pedido.</div>"
+            },
+            {
+                id: "PROMO_2026_02",
+                title: "Novidade no Portal",
+                imgSrc: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700">
+  <rect width="1200" height="700" fill="#7C3AED"/>
+  <text x="60" y="160" font-size="64" fill="#fff" font-family="Arial" font-weight="700">DASHBOARD ATUALIZADO</text>
+  <text x="60" y="240" font-size="36" fill="#fff" font-family="Arial" opacity=".9">Gráficos com animação + troca de páginas suave</text>
+  <circle cx="1040" cy="360" r="180" fill="rgba(255,255,255,.15)"/>
+  <circle cx="1040" cy="360" r="120" fill="rgba(255,255,255,.15)"/>
+  <circle cx="1040" cy="360" r="60" fill="rgba(255,255,255,.15)"/>
+</svg>`),
+                html: "<div class='promo-text'>Agora ficou mais rápido achar programas, e o dashboard ficou mais agradável de usar.</div>"
+            },
+            {
+                id: "PROMO_2026_03",
+                title: "Aviso Importante",
+                imgSrc: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="700">
+  <rect width="1200" height="700" fill="#F59E0B"/>
+  <text x="60" y="160" font-size="64" fill="#111" font-family="Arial" font-weight="800">MANUTENÇÃO PROGRAMADA</text>
+  <text x="60" y="240" font-size="36" fill="#111" font-family="Arial" opacity=".9">Sábado • 22:00 • duração estimada 20 min</text>
+  <rect x="60" y="310" width="600" height="90" rx="18" fill="rgba(0,0,0,.12)"/>
+  <text x="90" y="370" font-size="34" fill="#111" font-family="Arial">Durante o período, pode haver instabilidade.</text>
+</svg>`),
+                html: "<div class='promo-text'>Planeje suas operações para evitar impacto.</div>"
+            }
+        ];
+
+        // storage helpers
+        function promoHideKey(id){ return "portalv_hide_promo_" + id; }
+        function promoViewedKey(id){ return "portalv_viewed_promo_" + id; }
+
+        function safeGet(k){
+            try { return localStorage.getItem(k); } catch(e){ return null; }
+        }
+        function safeSet(k, v){
+            try { localStorage.setItem(k, v); } catch(e){}
+        }
+
+        function isPromoHidden(id){ return safeGet(promoHideKey(id)) === "1"; }
+        function setPromoHidden(id, hidden){ safeSet(promoHideKey(id), hidden ? "1":"0"); }
+        function setPromoViewedNow(id){ safeSet(promoViewedKey(id), String(Date.now())); }
+
+        function getVisiblePromos(){ return promoNews.filter(p => !isPromoHidden(p.id)); }
+        function getUnseenPromoCount(){
+            return promoNews.filter(p => !isPromoHidden(p.id) && !safeGet(promoViewedKey(p.id))).length;
+        }
+
+        function refreshPromoCountUI(){
+            $("#promoCountInBell").text(String(getVisiblePromos().length));
+            const promoUnseen = getUnseenPromoCount();
+            const total = 3 + promoUnseen;
+            notificationCount = total;
+            refreshNotificationBadge();
+        }
+
+        // ===== Promo Window + Wizard =====
+        let promoWnd = null;
+
+        function isMobile(){ return window.matchMedia("(max-width: 768px)").matches; }
+
+        function ensurePromoWindow(){
+            if(promoWnd) return promoWnd;
+
+            promoWnd = $("#promoWindow").kendoWindow({
+                title: "Promoções",
+                modal: true,
+                visible: false,
+                resizable: false,
+                draggable: true,
+                actions: [],
+                width: 520, // menor
+                animation: {
+                    open: { effects: "zoomIn fadeIn", duration: 260 },
+                    close:{ effects: "zoomOut fadeOut", duration: 220 }
+                }
+            }).data("kendoWindow");
+
+            promoWnd.bind("open", function(){
+                const wnd = this;
+                wnd.wrapper.addClass("promo-window-top");
+
+                if(isMobile()){
+                    wnd.maximize();
+                    wnd.wrapper.removeClass("promo-window-top");
+                } else {
+                    wnd.restore();
+                    wnd.setOptions({ width: 520, height: 460 }); // ✅ menor no desktop
+                    wnd.center();
+                    wnd.wrapper.css({ top: "64px" });
+                }
+            });
+
+            return promoWnd;
+        }
+
+        function buildWizardSteps(promos){
+            return promos.map((p, idx) => ({
+                title: (idx + 1) + "/" + promos.length,
+                content: `
+                <div class="promo-step">
+                  <h4>${kendo.htmlEncode(p.title)}</h4>
+                  ${p.imgSrc ? `<img class="promo-img" src="${p.imgSrc}" alt="${kendo.htmlEncode(p.title)}">` : ""}
+                  <div class="promo-text">${p.html || ""}</div>
+
+                  <label class="promo-check">
+                    <input type="checkbox" class="promo-hide-check" data-pid="${p.id}">
+                    Não quero ver mais esta notícia
+                  </label>
+                </div>
+            `
+            }));
+        }
+
+        function wirePromoCheckboxes(){
+            $(".promo-hide-check").each(function(){
+                const id = $(this).data("pid");
+                $(this).prop("checked", isPromoHidden(id));
+            });
+
+            $(".promo-hide-check").off("change").on("change", function(){
+                const id = $(this).data("pid");
+                const checked = $(this).is(":checked");
+                setPromoHidden(id, checked);
+            });
+        }
+
+        function openPromosWizard(forceStartIndex0){
+            const promos = getVisiblePromos();
+            if(promos.length === 0) return;
+
+            const wnd = ensurePromoWindow();
+            wnd.content(`<div id="promoWizard"></div>`);
+            wnd.open();
+
+            const existing = $("#promoWizard").data("kendoWizard");
+            if(existing){ existing.destroy(); }
+
+            $("#promoWizard").kendoWizard({
+                steps: buildWizardSteps(promos),
+                actionBar: true,
+                validateForms: false,
+                activate: function(e){
+                    const stepIndex = e.step.options.index;
+                    const p = promos[stepIndex];
+                    if(p) setPromoViewedNow(p.id);
+
+                    const wiz = e.sender;
+                    const $bar = wiz.wrapper.find(".k-wizard-buttons");
+                    $bar.find(".k-wizard-cancel").hide();
+
+                    refreshPromoCountUI();
+                    wirePromoCheckboxes();
+
+                    wiz.wrapper.find(".k-wizard-content").kendoStop(true,true).kendoAnimate({
+                        effects: "fade:in",
+                        duration: 140
+                    });
+                },
+                done: function(){
+                    wirePromoCheckboxes();
+                    refreshPromoCountUI();
+                    wnd.close();
+                }
+            });
+
+            const promoWizard = $("#promoWizard").data("kendoWizard");
+            promoWizard.wrapper.css({ height: "100%" });
+
+            if(forceStartIndex0){
+                try { promoWizard.select(0); } catch(e){}
+            }
+
+            setTimeout(() => {
+                wirePromoCheckboxes();
+                refreshPromoCountUI();
+            }, 0);
+        }
+
+        function showPromosOnDashboardFirstTime(){
+            try {
+                const key = "portalv_promos_shown_session";
+                if(sessionStorage.getItem(key) === "1") return;
+                sessionStorage.setItem(key, "1");
+            } catch(e){}
+            openPromosWizard(true);
+        }
+
+        // ===== "Logos" (tiles) =====
+        const logos = {
+            financeiro: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <rect x="2" y="3" width="20" height="18" rx="4" fill="#0B5FFF"/>
+  <path d="M7 15c1.4 1.6 3.2 2.4 5.4 2.4 2.9 0 4.6-1.3 4.6-3.1 0-1.8-1.4-2.6-3.7-3l-1.6-.3c-1.2-.2-1.9-.6-1.9-1.3 0-.7.8-1.2 2-1.2 1.2 0 2.3.4 3.1 1.2l1.3-1.4c-1-1-2.4-1.6-4.1-1.7V6H11v1.1c-2.2.3-3.6 1.6-3.6 3.3 0 1.7 1.2 2.6 3.3 3l1.6.3c1.4.3 2.3.6 2.3 1.4 0 .8-.9 1.2-2.2 1.2-1.4 0-2.7-.6-3.6-1.6L7 15z" fill="#fff"/>
+</svg>`),
+
+            pedidos: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <rect x="2" y="3" width="20" height="18" rx="4" fill="#16A34A"/>
+  <path d="M6 16l4-4 3 3 5-6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="10" cy="12" r="1.2" fill="#fff"/>
+  <circle cx="13" cy="15" r="1.2" fill="#fff"/>
+  <circle cx="18" cy="9" r="1.2" fill="#fff"/>
+</svg>`),
+
+            mix: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <rect x="2" y="3" width="20" height="18" rx="4" fill="#7C3AED"/>
+  <path d="M12 6a6 6 0 1 0 6 6h-6V6z" fill="#fff" opacity="0.95"/>
+  <path d="M13 6.1V12h5.9A6 6 0 0 0 13 6.1z" fill="#fff" opacity="0.65"/>
+</svg>`),
+
+            alertas: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <rect x="2" y="3" width="20" height="18" rx="4" fill="#F59E0B"/>
+  <path d="M12 6l6 12H6L12 6z" fill="#fff" opacity="0.95"/>
+  <rect x="11.2" y="10" width="1.6" height="5" fill="#F59E0B"/>
+  <circle cx="12" cy="16.7" r="1" fill="#F59E0B"/>
+</svg>`),
+
+            crm: svgDataUri(`<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24">
+  <rect x="2" y="3" width="20" height="18" rx="4" fill="#0284C7"/>
+  <path d="M8 16c0-1.7 1.8-3 4-3s4 1.3 4 3v1H8v-1z" fill="#fff" opacity="0.95"/>
+  <circle cx="12" cy="10" r="2.3" fill="#fff" opacity="0.95"/>
+</svg>`)
+        };
+
+        // ===== Dados =====
+        const rawMenu = [
+            { id:0, text:"Início", parentId:null, pageUrl:"__HOME__", favorite:true },
+
+            { id:1, text:"Cadastro", parentId:null },
+            { id:2, text:"Clientes", parentId:1, pageUrl:"clientes.html", favorite:true },
+            { id:3, text:"Produtos", parentId:1, pageUrl:"produtos.html", favorite:false },
+
+            // ✅ NOVO GRUPO
+            { id:6, text:"Consultas", parentId:null },
+            // ✅ NOVO ITEM (página de filtro)
+            { id:7, text:"Filtro de Consulta", parentId:6, pageUrl:"consulta-filtro-02.html", favorite:true },
+
+            { id:4, text:"Relatórios", parentId:null },
+            { id:5, text:"Faturamento", parentId:4, pageUrl:"rel_faturamento.html", favorite:true }
+        ];
+
+
+        const menuDs = new kendo.data.DataSource({ data: rawMenu });
+
+        function buildTreeData(all){
+            const byId = new Map();
+            all.forEach(x => byId.set(x.id, { ...x, items: [] }));
+            const roots = [];
+            byId.forEach(node => {
+                if (node.parentId == null) roots.push(node);
+                else byId.get(node.parentId)?.items.push(node);
+            });
+            return roots;
+        }
+
+        function buildProgramDS(all){
+            return new kendo.data.DataSource({
+                data: all
+                    .filter(x => !!x.pageUrl)
+                    .map(x => ({ id:x.id, text:x.text, pageUrl:x.pageUrl, favorite: !!x.favorite })),
+                schema: { model: { id: "id" } }
+            });
+        }
+
+        /* ===== CRM (mock) - pendentes de retorno ===== */
+        const crmLeads = [
+            { id: 1, nome: "Lead A", pendenteRetorno: true },
+            { id: 2, nome: "Lead B", pendenteRetorno: false },
+            { id: 3, nome: "Lead C", pendenteRetorno: true }
+        ];
+
+        const crmOportunidades = [
+            { id: 101, nome: "Oportunidade X", pendenteRetorno: true },
+            { id: 102, nome: "Oportunidade Y", pendenteRetorno: true },
+            { id: 103, nome: "Oportunidade Z", pendenteRetorno: false }
+        ];
+
+        const crmPosVenda = [
+            { id: 201, nome: "Pós-venda A", pendenteRetorno: true },
+            { id: 202, nome: "Pós-venda B", pendenteRetorno: false },
+            { id: 203, nome: "Pós-venda C", pendenteRetorno: true },
+            { id: 204, nome: "Pós-venda D", pendenteRetorno: true }
+        ];
+
+        function getCrmPendentes(){
+            const oportunidades = crmOportunidades.filter(x => x.pendenteRetorno).length;
+            const leads = crmLeads.filter(x => x.pendenteRetorno).length;
+            const posVenda = crmPosVenda.filter(x => x.pendenteRetorno).length;
+            return { oportunidades, leads, posVenda };
+        }
+
+        function openMenu(){
+            document.body.classList.add("menu-open");
+            $("#menuPanel").attr("aria-hidden", "false");
+        }
+        function closeMenu(){
+            document.body.classList.remove("menu-open");
+            $("#menuPanel").attr("aria-hidden", "true");
+        }
+
+        function destroyCurrentContent(){
+            const $c = $("#appContent");
+            kendo.destroy($c);
+            $c.off();
+            $c.empty();
+        }
+
+        function refreshNotificationBadge(){
+            const $b = $("#notificationCount");
+            if(!$b.length) return;
+
+            if(notificationCount > 0){
+                $b.text(notificationCount > 99 ? "99+" : String(notificationCount));
+                $b.show();
+            } else {
+                $b.hide();
+            }
+        }
+
+        function animatePageOut(){
+            const $c = $("#appContent");
+            if(!$c.length) return Promise.resolve();
+            $c.removeClass("page-transition-in").addClass("page-transition-out");
+            return new Promise(resolve => setTimeout(resolve, 170));
+        }
+
+        function animatePageIn(){
+            const $c = $("#appContent");
+            if(!$c.length) return;
+            $c[0].offsetHeight;
+            $c.removeClass("page-transition-out").addClass("page-transition-in");
+        }
+
+        function setDashboardLastUpdate(dateObj){
+            const $el = $("#dashLastUpdate");
+            if(!$el.length) return;
+            $el.text(kendo.toString(dateObj || new Date(), "dd/MM/yyyy HH:mm:ss"));
+        }
+
+        // ===== Charts =====
+        function initDashboardCharts(ids){
+            $("#" + ids.col).kendoChart({
+                transitions: true,
+                dataSource: { data: [
+                        { mes: "Out", valor: 92 },
+                        { mes: "Nov", valor: 105 },
+                        { mes: "Dez", valor: 130 },
+                        { mes: "Jan", valor: 118 },
+                        { mes: "Fev", valor: 142 }
+                    ]},
+                legend: { visible: false },
+                chartArea: { background: "transparent" },
+                seriesDefaults: { type: "column", animation: { duration: 700 } },
+                series: [{ field: "valor" }],
+                categoryAxis: { field: "mes", majorGridLines: { visible: false } },
+                valueAxis: { majorGridLines: { visible: true } },
+                tooltip: { visible: true, format: "{0}" }
+            });
+
+            $("#" + ids.line).kendoChart({
+                transitions: true,
+                dataSource: { data: [
+                        { semana: "S1", qtd: 64 },
+                        { semana: "S2", qtd: 72 },
+                        { semana: "S3", qtd: 58 },
+                        { semana: "S4", qtd: 80 }
+                    ]},
+                legend: { visible: false },
+                chartArea: { background: "transparent" },
+                seriesDefaults: { type: "line", style: "smooth", animation: { duration: 700 } },
+                series: [{ field: "qtd" }],
+                categoryAxis: { field: "semana", majorGridLines: { visible: false } },
+                valueAxis: { majorGridLines: { visible: true } },
+                tooltip: { visible: true, format: "{0}" }
+            });
+
+            $("#" + ids.donut).kendoChart({
+                transitions: true,
+                chartArea: { background: "transparent" },
+                legend: { position: "bottom" },
+                seriesDefaults: { type: "donut", animation: { duration: 800 } },
+                series: [{
+                    data: [
+                        { category: "Cabos", value: 45 },
+                        { category: "Conectores", value: 25 },
+                        { category: "Acessórios", value: 18 },
+                        { category: "Outros", value: 12 }
+                    ]
+                }],
+                tooltip: { visible: true, template: "#= category # - #= value#%" }
+            });
+
+            requestAnimationFrame(() => {
+                $("#" + ids.col).addClass("on");
+                $("#" + ids.line).addClass("on");
+                $("#" + ids.donut).addClass("on");
+            });
+        }
+
+        // ===== Dashboard =====
+        function initDashboard(){
+            const $host = $("#dashboardTiles");
+            if(!$host.length) return;
+
+            const existing = $host.data("kendoTileLayout");
+            if(existing){
+                existing.destroy();
+                $host.empty();
+            }
+
+            const isMob = window.matchMedia("(max-width: 768px)").matches;
+            dashRenderSeq++;
+
+            const ids = {
+                col:   "ch_col_" + dashRenderSeq,
+                line:  "ch_line_" + dashRenderSeq,
+                donut: "ch_donut_" + dashRenderSeq
+            };
+
+            const crm = getCrmPendentes();
+
+            // largura calculada (segura)
+            const cols = isMob ? 1 : 3;
+            const gap = 14;
+
+            const hostW = Math.max(
+                320,
+                $host.width() || 0,
+                $host.parent().width() || 0,
+                $("#appContent").width() || 0
+            );
+
+            const colW = isMob ? "100%" : Math.floor((hostW - gap * (cols - 1)) / cols);
+
+            $host.kendoTileLayout({
+                columns: cols,
+                columnWidth: colW,
+                rowHeight: 220,
+                gap: { rows: gap, columns: gap },
+                resizable: !isMob,
+                reorderable: !isMob,
+                containers: [
+                    {
+                        header: { template: `
+                        <div class="tile-header">
+                          <img class="tile-logo" src="${logos.financeiro}" alt="Financeiro"/>
+                          <span>Faturamento (5 meses)</span>
+                        </div>` },
+                        bodyTemplate: `<div class="chart-box"><div id="${ids.col}" class="chart-anim"></div></div>`
+                    },
+                    {
+                        header: { template: `
+                        <div class="tile-header">
+                          <img class="tile-logo" src="${logos.pedidos}" alt="Pedidos"/>
+                          <span>Pedidos (semanal)</span>
+                        </div>` },
+                        bodyTemplate: `<div class="chart-box"><div id="${ids.line}" class="chart-anim"></div></div>`
+                    },
+                    {
+                        header: { template: `
+                        <div class="tile-header">
+                          <img class="tile-logo" src="${logos.mix}" alt="Mix"/>
+                          <span>Mix de vendas</span>
+                        </div>` },
+                        bodyTemplate: `<div class="chart-box"><div id="${ids.donut}" class="chart-anim"></div></div>`
+                    },
+
+                    /* ✅ CRM (MENOR VERTICAL) */
+                    {
+                        colSpan: isMob ? 1 : 2,
+                        header: { template: `
+                        <div class="tile-header">
+                          <img class="tile-logo" src="${logos.crm}" alt="CRM"/>
+                          <span>CRM - Pendências</span>
+                        </div>` },
+
+                        bodyTemplate: `
+                        <div style="padding:10px 12px;">
+                          <div style="display:flex; gap:10px; align-items:flex-end; flex-wrap:wrap;">
+
+                            <div style="flex:1; min-width:140px;">
+                              <div style="opacity:.75; font-size:12px;">Oportunidades</div>
+                              <a href="javascript:void(0)" class="crm-kpi-link"
+                                 data-page="crm-02.html"
+                                 data-filter="oportunidade"
+                                 style="display:inline-block; font-size:30px; font-weight:800; line-height:1; text-decoration:none;">
+                                ${crm.oportunidades}
+                              </a>
+                            </div>
+
+                            <div style="flex:1; min-width:110px;">
+                              <div style="opacity:.75; font-size:12px;">Leads</div>
+                              <a href="javascript:void(0)" class="crm-kpi-link"
+                                 data-page="crm-02.html"
+                                 data-filter="lead"
+                                 style="display:inline-block; font-size:30px; font-weight:800; line-height:1; text-decoration:none;">
+                                ${crm.leads}
+                              </a>
+                            </div>
+
+                            <div style="flex:1; min-width:140px;">
+                              <div style="opacity:.75; font-size:12px;">Pós-venda</div>
+                              <a href="javascript:void(0)" class="crm-kpi-link"
+                                 data-page="crm-02.html"
+                                 data-filter="posvenda"
+                                 style="display:inline-block; font-size:30px; font-weight:800; line-height:1; text-decoration:none;">
+                                ${crm.posVenda}
+                              </a>
+                            </div>
+
+                          </div>
+                        </div>`
+                    },
+
+                    {
+                        colSpan: 1,
+                        header: { template: `
+                        <div class="tile-header">
+                          <img class="tile-logo" src="${logos.alertas}" alt="Alertas"/>
+                          <span>Alertas</span>
+                        </div>` },
+                        bodyTemplate: "<div style='padding:14px;'>• 5 títulos vencidos<br>• 2 ordens pendentes<br>• 1 integração com erro</div>"
+                    }
+                ]
+            });
+
+            setTimeout(() => {
+                initDashboardCharts(ids);
+                kendo.resize($host);
+            }, 0);
+        }
+
+        function renderDashboardWithLoader(){
+            const $content = $("#appContent");
+            if(!$content.length) return;
+
+            if(dashLoadingTimer){
+                clearTimeout(dashLoadingTimer);
+                dashLoadingTimer = null;
+            }
+
+            kendo.ui.progress($content, true);
+
+            dashLoadingTimer = setTimeout(function(){
+                initDashboard();
+                setDashboardLastUpdate(new Date());
+                kendo.ui.progress($content, false);
+                dashLoadingTimer = null;
+
+                showPromosOnDashboardFirstTime();
+                refreshPromoCountUI();
+            }, 1200);
+        }
+
+        async function showDashboard(){
+            await animatePageOut();
+            destroyCurrentContent();
+
+            $("#appContent").html(`
+            <div class="dash-head">
+              <h3 class="dash-title">Dashboard</h3>
+              <div class="dash-updated">Atualizado em: <span id="dashLastUpdate">-</span></div>
+            </div>
+            <div id="dashboardTiles"></div>
+        `);
+
+            animatePageIn();
+
+            setTimeout(() => {
+                renderDashboardWithLoader();
+                kendo.resize($("#dashboardTiles"));
+            }, 0);
+        }
+
+        // ===== Páginas externas (DIV) =====
+        async function loadPageIntoDiv(url){
+            if(!url) return;
+
+            await animatePageOut();
+            destroyCurrentContent();
+
+            const $host = $("#appContent");
+            kendo.ui.progress($host, true);
+
+            try {
+                const resp = await fetch(url, { cache:"no-cache" });
+                if(!resp.ok) throw new Error("HTTP " + resp.status);
+
+                const html = await resp.text();
+                const doc  = new DOMParser().parseFromString(html, "text/html");
+
+                const root = doc.querySelector("#page-root");
+                if(!root) throw new Error("Página sem #page-root");
+
+                const scriptFile = root.getAttribute("data-script");
+                const initName   = root.getAttribute("data-init");
+
+                $host.html(root.innerHTML);
+
+                if(scriptFile){
+                    await loadScriptOnce(scriptFile);
+                }
+
+                if(initName && typeof window[initName] === "function"){
+                    window[initName]();
+                }
+
+                kendo.resize($host);
+
+            } catch(err){
+                    console.error("🔥 Erro ao carregar página:", url);
+                    console.error(err);
+                    if (err && err.stack) console.error("STACK:\n" + err.stack);
+
+                    $host.html(
+                        "<div style='color:#b00020;font-weight:700;'>Erro ao carregar: "+url+"</div>" +
+                        "<div style='opacity:.8;margin-top:6px;white-space:pre-wrap;'>" +
+                        (err?.stack || err?.message || "") +
+                        "</div>"
+                    );
+
+            } finally {
+                kendo.ui.progress($host, false);
+                animatePageIn();
+            }
+        }
+
+        /* ===== Clique nos números do CRM -> abre crm-02.html ===== */
+        $(document).on("click", ".crm-kpi-link", function(ev){
+            ev.preventDefault();
+
+            const url = $(this).data("page") || "crm-02.html";
+            const phase = $(this).data("filter") || "";
+
+            loadPageIntoDiv(url);
+
+            try { sessionStorage.setItem("crm_open_phase", phase); } catch(e){}
+        });
+
+        function runProgram(item){
+            if(!item) return;
+
+            if(item.pageUrl === "__HOME__" || item.id === 0){
+                showDashboard();
+                closeMenu();
+                return;
+            }
+            if(!item.pageUrl) return;
+
+            loadPageIntoDiv(item.pageUrl);
+            closeMenu();
+        }
+
+        // ===== AppBar =====
+        function initAppBar(all){
+            programDs = buildProgramDS(all);
+
+            $("#topAppBar").kendoAppBar({
+                items: [
+                    { type:"contentItem", template:"<button id='btnToggleMenu'></button>" },
+                    { type:"spacer", width:1 },
+
+                    /* ✅ Portal V+ virou link pro dashboard */
+                    { type:"contentItem", template:"<a id='homeBrand' href='javascript:void(0)'>Portal V+</a>" },
+
+                    { type:"spacer" },
+                    { type:"contentItem", template:"<input id='programSearch'/>" },
+                    { type:"spacer", width:1 },
+                    { type:"contentItem", template:"<button id='btnFavOnly'></button>" },
+                    { type:"spacer" },
+
+                    {
+                        type:"contentItem",
+                        template:
+                            "<div class='notification-wrapper'>" +
+                            "<button id='btnNotifications'></button>" +
+                            "<span class='notification-badge' id='notificationCount'>0</span>" +
+                            "</div>"
+                    },
+                    { type:"spacer", width:1 },
+                    { type:"contentItem", template:"<button id='btnUser'></button>" }
+                ]
+            });
+
+            $("#btnToggleMenu").kendoButton({ icon:"menu", fillMode:"flat" });
+            $("#btnToggleMenu").on("click", () => {
+                document.body.classList.contains("menu-open") ? closeMenu() : openMenu();
+            });
+
+            // clique no "Portal V+" -> dashboard
+            $("#homeBrand").on("click", function(e){
+                e.preventDefault();
+                showDashboard();
+                closeMenu();
+            });
+
+            $("#btnFavOnly").kendoButton({
+                icon: "star",
+                themeColor: "base",
+                fillMode: "flat",
+                click: function(){
+                    onlyFavorites = !onlyFavorites;
+                    applyFavoriteFilter();
+                }
+            });
+
+            $("#btnNotifications").kendoButton({ icon:"bell", fillMode:"flat" });
+
+            const popup = $("#notificationPopup").kendoPopup({
+                anchor: $("#btnNotifications"),
+                origin: "bottom right",
+                position: "top right"
+            }).data("kendoPopup");
+
+            $("#btnNotifications").on("click", function(){
+                refreshPromoCountUI();
+
+                if(!$("#btnOpenPromosFromBell").data("kendoButton")){
+                    $("#btnOpenPromosFromBell").kendoButton({
+                        themeColor: "base",
+                        click: function(){
+                            popup.close();
+                            openPromosWizard(true);
+                        }
+                    });
+                }
+
+                popup.toggle();
+            });
+
+            $("#btnUser").kendoDropDownButton({
+                icon:"user",
+                items: [
+                    { id:"home", text:"Início" },
+                    { id:"profile", text:"Perfil" },
+                    { id:"logout", text:"Sair" }
+                ],
+                click: function(e){
+                    if(e.id === "home") showDashboard();
+                    if(e.id === "logout") alert("Sair (implementar logout)");
+                }
+            });
+
+            const cb = $("#programSearch").kendoComboBox({
+                dataSource: programDs,
+                dataTextField: "text",
+                dataValueField: "id",
+                filter: "contains",
+                suggest: true,
+                clearButton: true,
+                placeholder: "Buscar programa..."
+            }).data("kendoComboBox");
+
+            cb.bind("select", function(e){
+                const item = this.dataItem(e.item.index());
+                setTimeout(() => {
+                    runProgram(item);
+                    this.value("");
+                    this.text("");
+                }, 0);
+            });
+
+            refreshPromoCountUI();
+        }
+
+        // ===== Favoritos =====
+        function applyFavoriteFilter(){
+            if(!programDs) return;
+
+            if(onlyFavorites){
+                programDs.filter({ field:"favorite", operator:"eq", value:true });
+            } else {
+                programDs.filter({});
+            }
+
+            const cb = $("#programSearch").data("kendoComboBox");
+            if(cb){ cb.value(""); cb.text(""); }
+
+            const btn = $("#btnFavOnly").data("kendoButton");
+            if(btn){
+                btn.element.toggleClass("fav-on", onlyFavorites);
+                btn.setOptions({
+                    icon: onlyFavorites ? "star-full" : "star",
+                    themeColor: onlyFavorites ? "warning" : "base",
+                    fillMode: "flat"
+                });
+                btn.element.attr("title", onlyFavorites ? "Somente favoritos" : "Todos os programas");
+            }
+        }
+
+        // ===== Menu TreeView =====
+        function initMenu(treeData){
+            $("#btnCloseMenu").kendoButton({ icon:"x", fillMode:"flat" });
+            $("#btnCloseMenu").on("click", closeMenu);
+            $("#menuBackdrop").on("click", closeMenu);
+
+            $("#menuTree").kendoTreeView({
+                dataSource: treeData,
+                dataTextField: "text",
+                select: function(e){
+                    const item = this.dataItem(e.node);
+                    if(!item) return;
+
+                    if(!item.pageUrl){
+                        const $node = $(e.node);
+                        $node.hasClass("k-expanded") ? this.collapse(e.node) : this.expand(e.node);
+                        this.select($());
+                        return;
+                    }
+
+                    runProgram(item);
+                }
+            });
+
+            $("#menuPanel").on("click", ev => ev.stopPropagation());
+            $("#menuTree").on("click", ev => ev.stopPropagation());
+        }
+
+        // ===== Boot =====
+        $(function(){
+            menuDs.fetch(function(){
+                const all = menuDs.data().toJSON();
+
+                initAppBar(all);
+                initMenu(buildTreeData(all));
+
+                showDashboard();
+
+                window.addEventListener("resize", function(){
+                    clearTimeout(window._tileResize);
+                    window._tileResize = setTimeout(function(){
+                        if ($("#dashboardTiles").length) renderDashboardWithLoader();
+                        if(promoWnd && promoWnd.element.is(":visible")){
+                            promoWnd.trigger("open");
+                        }
+                    }, 200);
+                });
+            });
+        });
+
+    })();
+</script>
+</body>
+</html>
