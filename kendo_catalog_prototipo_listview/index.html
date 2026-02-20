@@ -1,0 +1,370 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <title>Protótipo Catálogo Interativo - Ima Têxtil</title>
+
+    <!-- KENDO LOCAL -->
+    <link rel="stylesheet" href="../kendo/styles/default-main.css"/>
+    <script src="../kendo/js/jquery-3.7.1.min.js"></script>
+    <script src="../kendo/js/kendo.all.min.js"></script>
+    <script src="../license-kendo.js"></script>
+    <script src="../kendo/js/cultures/kendo.culture.pt-BR.min.js"></script>
+
+    <style>
+        body { margin:0; font-family: Arial, Helvetica, sans-serif; background:#fafafa; }
+        header { position:sticky; top:0; z-index:10; background:#fff; border-bottom:1px solid #e5e5e5; padding:12px 16px; }
+        .wrap { max-width:1180px; margin:0 auto; }
+        .topbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+        .topbar h1 { margin:0; font-size:18px; }
+        .content { padding:16px; }
+
+        .layout { display:grid; grid-template-columns: 420px 1fr; gap:14px; }
+        .panel { background:#fff; border:1px solid #e5e5e5; border-radius:12px; overflow:hidden; }
+        .panel-h { padding:12px; border-bottom:1px solid #eee; display:flex; justify-content:space-between; align-items:center; }
+        .panel-b { padding:12px; }
+
+        /* List */
+        #listView { height: calc(90vh - 150px); overflow:auto; }
+        .lv-item { display:flex; gap:10px; padding:10px; border-bottom:1px solid #f0f0f0; cursor:pointer; }
+        .lv-item:hover { background:#fafafa; }
+        .lv-thumb { width:90px; height:70px; overflow:hidden; border-radius:8px; background:#eee; flex:0 0 auto; }
+        .lv-thumb img { width:100%; height:100%; object-fit:cover; display:block; }
+
+        /* Stars */
+        .stars { display:flex; gap:6px; align-items:center; margin-top:6px; }
+        .star { font-size:22px; cursor:pointer; user-select:none; line-height:1; }
+        .star.on { color:#f5a623; }
+        .star.off { color:#bbb; }
+
+        /* Gallery */
+        .zoomPane{ position: relative; width: 100%; height: 100%; overflow: hidden; background:#111; border-radius:10px; }
+        .zoomImg{ position:absolute; left:50%; top:50%; transform:translate(-50%, -50%) scale(1); transform-origin:center center; max-width:none; max-height:none; user-select:none; }
+        #scrollView { height:100%; }
+        .gThumb { width:120px; height:86px; object-fit:cover; cursor:pointer; border:2px solid transparent; border-radius:8px; }
+        .gThumb.active { border-color:white; }
+        .gTopBar { display:flex; align-items:center; gap:8px; }
+        .gTopBar span { color:#fff; margin-left:8px; }
+
+        @media(max-width:980px){
+            .layout{ grid-template-columns:1fr; }
+            #listView { height: 45vh; }
+        }
+    </style>
+</head>
+
+<body>
+<header>
+    <div class="wrap topbar">
+        <h1>Catálogo Interativo</h1>
+        <input id="q" style="max-width:300px" placeholder="Buscar..."/>
+        <button id="btnEnviar">Enviar seleção</button>
+        <span id="countSel">0 selecionados</span>
+    </div>
+</header>
+
+<div class="wrap content">
+    <div class="layout">
+        <div class="panel">
+            <div class="panel-h">
+                <b>Produtos</b>
+                <span id="countTotal"></span>
+            </div>
+            <div class="panel-b" style="padding:0">
+                <div id="listView"></div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <div class="panel-h">
+                <b>Dados e avaliação</b>
+            </div>
+            <div class="panel-b">
+                <div id="detailHost" style="display:none">
+                    <h2 id="dNome" style="margin:0 0 8px 0;"></h2>
+
+                    <div><b>ID:</b> <span id="dId"></span></div>
+                    <div><b>Largura:</b> <span id="dLarg"></span></div>
+                    <div><b>Gramatura:</b> <span id="dGram"></span></div>
+                    <div><b>Composição:</b> <span id="dComp"></span></div>
+                    <div><b>NCM:</b> <span id="dNcm"></span></div>
+
+                    <div style="margin-top:10px">
+                        <b>Sua nota:</b>
+                        <div id="dStars" class="stars"></div>
+                    </div>
+
+                    <textarea id="dComentario" placeholder="Comentário..." style="width:100%;margin-top:10px;min-height:90px"></textarea>
+
+                    <div style="margin-top:10px; display:flex; gap:8px; flex-wrap:wrap;">
+                        <button id="btnVerImagens">Ver imagens</button>
+                        <button id="btnSalvar">Salvar</button>
+                    </div>
+                </div>
+
+                <div id="hint" style="color:#666">
+                    Selecione um produto na lista para ver os detalhes.
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- WINDOW GALERIA -->
+<div id="wndGallery" style="display:none">
+    <div style="height:100%;display:flex;flex-direction:column;background:#111;padding:10px;gap:10px">
+        <div class="gTopBar">
+            <button id="btnZoomIn">+</button>
+            <button id="btnZoomOut">-</button>
+            <button id="btnZoomReset">Reset</button>
+            <span id="gCounter"></span>
+        </div>
+
+        <div id="scrollView" style="flex:1"></div>
+        <div id="thumbBar" style="display:flex;gap:8px;overflow:auto"></div>
+    </div>
+</div>
+
+<script>
+    // ===== CONFIG =====
+    kendo.culture("pt-BR");
+
+    // Ajuste aqui se precisar:
+    const ASSET_BASE = "assets/"; // exemplo: "../assets/" | "/portal/assets/" | "./assets/"
+
+    // ===== DADOS =====
+    const produtos = [
+        {
+            id:"130062",
+            nome:"Tricoline Elastic Est. II Imp.",
+            largura:"1,42 m",
+            gramatura:"160 g/m²",
+            composicao:"97% Algodão, 3% Elastano",
+            ncm:"5208.52.00",
+            images:["p001.jpg","p002.jpg","p003.jpg","p004.jpg","p005.jpg"]
+        }
+        // Coloque os outros produtos aqui (mesma estrutura)
+    ];
+
+    // ===== ESTADO =====
+    let selectedProduct = null;
+    let wndGallery = null;
+    let sv = null;
+    let zoom = 1;
+    const sel = new Map(); // { productId -> {nota, comentario, selecionado} }
+
+    // ===== HELPERS =====
+    function imgUrl(file){
+        return ASSET_BASE + file;
+    }
+
+    function setZoom(v){
+        zoom = v;
+        $("#scrollView .zoomImg").css("transform", `translate(-50%, -50%) scale(${zoom})`);
+    }
+
+    // loga erro de imagem (network/404 não vira erro JS, então isso ajuda MUITO)
+    function wireImgErrorLogging(){
+        $(document).off("error.catalogImg").on("error.catalogImg", "img", function(){
+            console.warn("Falha ao carregar imagem:", this.src);
+        });
+    }
+
+    // ===== STARS =====
+    function renderStars(productId){
+        const $host = $("#dStars").empty();
+        const current = (sel.get(productId)?.nota) ?? 0;
+
+        for(let i=1;i<=5;i++){
+            $("<span/>", {
+                class: "star " + (i <= current ? "on" : "off"),
+                text: "★",
+                "data-v": i,
+                title: i
+            }).appendTo($host);
+        }
+
+        $host.off("click").on("click", ".star", function(){
+            const nota = Number($(this).data("v"));
+            const state = sel.get(productId) || {};
+            state.nota = nota;
+            state.selecionado = true;
+            sel.set(productId, state);
+
+            renderStars(productId);
+            $("#countSel").text(sel.size + " selecionados");
+        });
+    }
+
+    // ===== INIT =====
+    $(function(){
+        wireImgErrorLogging();
+
+        $("#btnEnviar").kendoButton();
+        $("#btnVerImagens").kendoButton();
+        $("#btnSalvar").kendoButton();
+        $("#btnZoomIn").kendoButton();
+        $("#btnZoomOut").kendoButton();
+        $("#btnZoomReset").kendoButton();
+        $("#q").kendoTextBox();
+
+        $("#countTotal").text(produtos.length + " itens");
+
+        const ds = new kendo.data.DataSource({ data: produtos });
+
+        const listView = $("#listView").kendoListView({
+            dataSource: ds,
+            selectable: "single",
+            template: kendo.template(`
+        <div class="lv-item">
+          <div class="lv-thumb">
+            <img src="#: imgUrl(images[0]) #" alt="#: nome #" loading="lazy"/>
+          </div>
+          <div>
+            <b>#: nome #</b><br/>
+            ID: #: id #
+          </div>
+        </div>
+      `),
+            change: function(){
+                const item = this.dataItem(this.select());
+                if(item) showDetail(item);
+            }
+        }).data("kendoListView");
+
+        // Busca simples (nome + id)
+        $("#q").on("input", function(){
+            const q = (this.value || "").toLowerCase().trim();
+            if(!q){
+                ds.filter({});
+                $("#countTotal").text(ds.data().length + " itens");
+                return;
+            }
+            ds.filter({
+                logic: "or",
+                filters: [
+                    { field: "nome", operator: function(a){ return (a || "").toLowerCase().includes(q); } },
+                    { field: "id", operator: function(a){ return String(a || "").toLowerCase().includes(q); } }
+                ]
+            });
+            $("#countTotal").text(ds.view().length + " itens");
+            listView.clearSelection();
+            selectedProduct = null;
+            $("#detailHost").hide();
+            $("#hint").show();
+        });
+
+        $("#btnVerImagens").on("click", function(){
+            if(selectedProduct) openGallery(selectedProduct);
+        });
+
+        $("#btnSalvar").on("click", function(){
+            if(!selectedProduct) return;
+
+            const pid = selectedProduct.id;
+            const state = sel.get(pid) || {};
+            state.comentario = $("#dComentario").val();
+            state.selecionado = true;
+            sel.set(pid, state);
+
+            $("#countSel").text(sel.size + " selecionados");
+            alert("Salvo (local). Depois você pode enviar pro backend.");
+        });
+
+        $("#btnEnviar").on("click", function(){
+            // Exemplo do payload que você mandaria pro backend
+            const payload = [];
+            sel.forEach((v, k) => payload.push({ id: k, ...v }));
+            console.log("Enviar seleção:", payload);
+            alert("Payload no console (F12).");
+        });
+
+        $("#btnZoomIn").on("click", function(){ setZoom(zoom + 0.25); });
+        $("#btnZoomOut").on("click", function(){ setZoom(Math.max(0.25, zoom - 0.25)); });
+        $("#btnZoomReset").on("click", function(){ setZoom(1); });
+    });
+
+    // ===== DETALHE =====
+    function showDetail(p){
+        selectedProduct = p;
+
+        $("#hint").hide();
+        $("#detailHost").show();
+
+        $("#dNome").text(p.nome);
+        $("#dId").text(p.id);
+        $("#dLarg").text(p.largura);
+        $("#dGram").text(p.gramatura);
+        $("#dComp").text(p.composicao);
+        $("#dNcm").text(p.ncm);
+
+        const state = sel.get(p.id) || {};
+        $("#dComentario").val(state.comentario || "");
+        renderStars(p.id);
+    }
+
+    // ===== GALERIA =====
+    function openGallery(p){
+        if(!wndGallery){
+            wndGallery = $("#wndGallery").kendoWindow({
+                modal:true,
+                width:"90vw",
+                height:"90vh",
+                title:"Galeria",
+                activate: function(){
+                    // Força recálculo quando a janela abre
+                    setTimeout(() => { if(sv) sv.refresh(); }, 0);
+                }
+            }).data("kendoWindow");
+        }
+
+        const imgs = (p.images || []).map(imgUrl);
+
+        // Thumbbar
+        const $tb = $("#thumbBar").empty();
+        imgs.forEach((src, idx) => {
+            $("<img/>", { class:"gThumb", src, alt:"Thumb" })
+                .on("click", function(){
+                    if(!sv) return;
+                    // timing safe (window modal às vezes atrasa layout)
+                    setTimeout(() => sv.scrollTo(idx), 0);
+                })
+                .appendTo($tb);
+        });
+
+        // ScrollView
+        $("#scrollView").empty().kendoScrollView({
+            dataSource: imgs,
+            enablePager: true,
+            contentHeight: "100%",
+            template: (src) => `
+        <div style="height:100%">
+          <div class="zoomPane">
+            <img class="zoomImg" src="${src}" alt="Imagem" />
+          </div>
+        </div>
+      `,
+            change: function(e){
+                const idx = e.page; // ✅ correto (não é nextPage)
+                $("#gCounter").text((idx + 1) + " / " + imgs.length);
+                $("#thumbBar .gThumb").removeClass("active").eq(idx).addClass("active");
+                setZoom(1);
+            }
+        });
+
+        sv = $("#scrollView").data("kendoScrollView");
+
+        // Inicial
+        $("#gCounter").text(imgs.length ? ("1 / " + imgs.length) : "0 / 0");
+        $("#thumbBar .gThumb").removeClass("active").eq(0).addClass("active");
+        setZoom(1);
+
+        wndGallery.center().open();
+
+        // Refresh extra depois de abrir (garante pager e swipe ok)
+        setTimeout(() => { if(sv) sv.refresh(); }, 50);
+    }
+</script>
+</body>
+</html>

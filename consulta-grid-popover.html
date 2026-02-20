@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>Grid - Stack Card (Tabs PE/PI) + Ações</title>
+    <title>Grid - Desktop compacto (preço resumo + popover) + Stack Mobile</title>
 
-    <link href="kendo/styles/bootstrap-vintage.css" rel="stylesheet" />
+    <link href="kendo/styles/default-main.css" rel="stylesheet" />
     <script src="kendo/js/jquery-3.7.1.min.js"></script>
     <script src="kendo/js/kendo.all.min.js"></script>
     <script src="license-kendo.js"></script>
@@ -14,7 +14,6 @@
     <style>
         html, body { height:100%; margin:0; }
         body { padding:14px; background:#f6f7fb; }
-
         #grid { width:100%; }
 
         /* toolbar */
@@ -27,7 +26,6 @@
 
         .bulk-actions-desktop{ display:flex; gap:8px; flex-wrap:wrap; }
         .bulk-actions-mobile{ display:none; }
-
         .is-stacked .bulk-actions-desktop{ display:none; }
         .is-stacked .bulk-actions-mobile{ display:inline-flex; }
 
@@ -42,7 +40,6 @@
             box-shadow: 0 8px 20px rgba(0,0,0,.06);
             overflow: hidden;
         }
-
         .stack-head{
             padding: 12px 12px 10px;
             display:flex;
@@ -51,89 +48,80 @@
             justify-content:space-between;
             border-bottom: 1px solid rgba(0,0,0,.06);
         }
-
-        .stack-title{
-            font-weight: 900;
-            font-size: 14px;
-            line-height: 1.1;
-            letter-spacing: .2px;
-        }
-        .stack-sub{
-            margin-top: 4px;
-            font-size: 12px;
-            line-height: 1.25;
-            opacity: .8;
-        }
-
+        .stack-title{ font-weight: 900; font-size: 14px; line-height: 1.1; }
+        .stack-sub{ margin-top: 4px; font-size: 12px; line-height: 1.25; opacity: .8; }
         .stack-chips{
-            margin-top: 10px;
-            display:flex;
-            flex-wrap:wrap;
-            gap:6px;
-            font-size: 12px;
+            margin-top: 10px; display:flex; flex-wrap:wrap; gap:6px; font-size: 12px;
         }
         .chip{
-            display:inline-flex;
-            align-items:center;
-            gap:6px;
-            padding: 4px 10px;
-            border-radius: 999px;
-            background: rgba(0,0,0,.03);
-            border: 1px solid rgba(0,0,0,.08);
-            white-space: nowrap;
+            display:inline-flex; align-items:center; gap:6px; padding: 4px 10px;
+            border-radius: 999px; background: rgba(0,0,0,.03);
+            border: 1px solid rgba(0,0,0,.08); white-space: nowrap;
         }
         .chip b{ font-weight: 900; }
-
         .stack-body{ padding: 10px 12px 12px; }
 
         /* botão ⋮ */
         .row-actions-btn.k-button { min-width: 36px; padding: 0 8px; }
         .row-actions-glyph { font-size: 18px; line-height:1; display:inline-block; transform: translateY(-1px); }
 
-        /* Se TabStrip ainda não inicializou, não quero bullet */
+        /* TabStrip (stack) */
         .stack-tabs > ul{ list-style:none; margin:0; padding:0; }
-
-        /* Abas (TabStrip) mais “app” */
-        .stack-tabs .k-tabstrip-items {
-            border-bottom: 1px solid rgba(0,0,0,.06);
-            padding: 0 6px;
-        }
+        .stack-tabs .k-tabstrip-items { border-bottom: 1px solid rgba(0,0,0,.06); padding: 0 6px; }
         .stack-tabs .k-item.k-state-default {
-            border-radius: 999px;
-            margin: 6px 6px 8px;
-            border: 1px solid rgba(0,0,0,.08);
-            background: rgba(0,0,0,.02);
+            border-radius: 999px; margin: 6px 6px 8px;
+            border: 1px solid rgba(0,0,0,.08); background: rgba(0,0,0,.02);
         }
-        .stack-tabs .k-item.k-state-active{
-            background: rgba(0,0,0,.06);
-        }
-        .stack-tabs .k-link{
-            padding: 8px 12px !important;
-            font-weight: 800;
-            font-size: 12px;
-        }
+        .stack-tabs .k-item.k-state-active{ background: rgba(0,0,0,.06); }
+        .stack-tabs .k-link{ padding: 8px 12px !important; font-weight: 800; font-size: 12px; }
 
-        /* preços (simples e bonito) */
-        .price-grid{
-            display:grid;
-            grid-template-columns: 1fr;
-            gap: 6px;
-            font-size: 12px;
-            margin-top: 6px;
-        }
+        .price-grid{ display:grid; grid-template-columns: 1fr; gap: 6px; font-size: 12px; margin-top: 6px; }
         .price-row{
-            display:flex;
-            justify-content:space-between;
-            gap: 10px;
-            padding: 8px 10px;
-            border-radius: 12px;
-            background: rgba(0,0,0,.02);
-            border: 1px solid rgba(0,0,0,.06);
+            display:flex; justify-content:space-between; gap: 10px;
+            padding: 8px 10px; border-radius: 12px;
+            background: rgba(0,0,0,.02); border: 1px solid rgba(0,0,0,.06);
         }
         .price-row b{ font-weight: 900; }
-
-        /* evita que clicar em controles selecione a linha */
         .stack-interactive { touch-action: manipulation; }
+
+        /* --- Desktop: coluna preço resumo + botão detalhes --- */
+        .price-mini{
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:8px;
+            white-space:nowrap;
+        }
+        .price-mini .big{ font-weight:900; }
+        .price-details-btn.k-button{
+            padding: 2px 8px;
+            min-width: auto;
+        }
+
+        /* Popover tabela */
+        .price-popover{
+            font-size: 12px;
+            width: 320px;
+        }
+        .price-popover table{
+            width:100%;
+            border-collapse:collapse;
+        }
+        .price-popover td{
+            padding:6px 6px;
+            border-bottom:1px solid rgba(0,0,0,.08);
+        }
+        .price-popover tr:last-child td{ border-bottom:0; }
+        .price-popover td:last-child{
+            text-align:right;
+            font-weight:900;
+            white-space:nowrap;
+        }
+        .price-popover .sec{
+            margin:8px 0 4px;
+            font-weight:900;
+            opacity:.85;
+        }
     </style>
 </head>
 
@@ -161,6 +149,7 @@
         }
     ];
 
+    // --------- AÇÕES (⋮ e lote) ----------
     const ACTIONS = {
         book_pi:   "Gerar Book PI",
         book_pe:   "Gerar Book PE",
@@ -187,6 +176,7 @@
         return items;
     }
 
+    // stubs
     function runActionSingle(action, item){
         kendo.alert("<b>"+kendo.htmlEncode(ACTIONS[action]||action)+"</b><br><br>"
             + kendo.htmlEncode(item.codProd) + " - " + kendo.htmlEncode(item.descProd));
@@ -197,7 +187,50 @@
         kendo.alert("<b>"+kendo.htmlEncode(ACTIONS[action]||action)+"</b><br><br>"+lista);
     }
 
-    // Desktop columns
+    // --------- PREÇO: helpers seguros ----------
+    function isNum(v){ return typeof v === "number" && !isNaN(v); }
+    function fmtC2(v){ return isNum(v) ? kendo.toString(v, "c2") : "-"; }
+
+    function maxPrice(item){
+        const vals = [
+            item.pe_padrao, item.pe_promocao, item.pe_rubi, item.pe_safira,
+            item.pi_padrao, item.pi_rubi
+        ].filter(isNum);
+        if (!vals.length) return null;
+        return Math.max.apply(null, vals);
+    }
+
+    function pricePopoverHtml(item){
+        const pe = [
+            ["Padrão", item.pe_padrao],
+            ["Promoção", item.pe_promocao],
+            ["Rubi", item.pe_rubi],
+            ["Safira", item.pe_safira]
+        ];
+        const pi = [
+            ["Padrão", item.pi_padrao],
+            ["Rubi", item.pi_rubi]
+        ];
+
+        const row = (label, val) =>
+            `<tr><td>${kendo.htmlEncode(label)}</td><td>${fmtC2(val)}</td></tr>`;
+
+        return `
+      <div class="price-popover">
+        <div style="font-weight:900; margin-bottom:6px;">
+          ${kendo.htmlEncode(item.codProd)} — ${kendo.htmlEncode(item.descProd)}
+        </div>
+
+        <div class="sec">PE</div>
+        <table>${pe.map(x => row(x[0], x[1])).join("")}</table>
+
+        <div class="sec">PI</div>
+        <table>${pi.map(x => row(x[0], x[1])).join("")}</table>
+      </div>
+    `;
+    }
+
+    // --------- COLUNAS DESKTOP ----------
     const columnsColumnsMode = [
         {
             title:"",
@@ -212,30 +245,43 @@
         </button>
       `
         },
-        { field:"codProd", title:"Código", width:140,
-            filterable:{ extra:false, operators:{ string:{ contains:"Contém", eq:"Igual" } } } },
-        { field:"descProd", title:"Descrição", width:320,
-            filterable:{ extra:false, operators:{ string:{ contains:"Contém", eq:"Igual" } } } },
-        { field:"un", title:"Un.", width:120, filterable:false },
-        { field:"prontaQt", title:"Pronta Qt.", width:150, format:"{0:n0}", filterable:false },
-        { field:"programadoQt", title:"Programado Qt.", width:170, format:"{0:n0}", filterable:false },
-        { field:"primeiraChegada", title:"1ª Chegada", width:160, format:"{0:dd/MM/yyyy}", filterable:false },
-        { title:"Preços - PE", filterable:false, columns:[
-                { field:"pe_padrao", title:"Padrão", width:120, format:"{0:c2}", filterable:false },
-                { field:"pe_promocao", title:"Promoção", width:120, format:"{0:c2}", filterable:false },
-                { field:"pe_rubi", title:"Rubi", width:120, format:"{0:c2}", filterable:false },
-                { field:"pe_safira", title:"Safira", width:120, format:"{0:c2}", filterable:false }
-            ]},
-        { title:"Preços - PI", filterable:false, columns:[
-                { field:"pi_padrao", title:"Padrão", width:120, format:"{0:c2}", filterable:false },
-                { field:"pi_rubi", title:"Rubi", width:120, format:"{0:c2}", filterable:false }
-            ]}
+        {
+            field:"codProd", title:"Código", width:140,
+            filterable:{ extra:false, operators:{ string:{ contains:"Contém", eq:"Igual" } } }
+        },
+        {
+            field:"descProd", title:"Descrição", width:360,
+            filterable:{ extra:false, operators:{ string:{ contains:"Contém", eq:"Igual" } } }
+        },
+        { field:"un", title:"Un.", width:90, filterable:false },
+        { field:"prontaQt", title:"Pronta", width:110, format:"{0:n0}", filterable:false },
+        { field:"programadoQt", title:"Prog.", width:110, format:"{0:n0}", filterable:false },
+        { field:"primeiraChegada", title:"1ª Chegada", width:140, format:"{0:dd/MM/yyyy}", filterable:false },
+
+        {
+            title:"Maior preço",
+            width: 240,
+            sortable: false,
+            filterable: false,
+            template: function(d){
+                const m = maxPrice(d);
+                const txt = (m == null) ? "-" : fmtC2(m);
+                return `
+          <div class="price-mini">
+            <span class="big">${txt}</span>
+            <button type="button"
+              title="Ver tabela de preços"
+              class="k-button k-button-sm k-rounded-md k-button-solid k-button-solid-base price-details-btn"
+              data-uid="${d.uid}">Detalhes</button>
+          </div>
+        `;
+            }
+        }
     ];
 
-    // Stack card: 1 coluna estrutural
+    // --------- STACK ----------
     const columnsStackedCard = [ { sortable:false, filterable:false, title:"" } ];
 
-    // Card template com TabStrip (sem PanelBar)
     const stackedRowTemplate = kendo.template(`
     <tr data-uid="#= uid #">
       <td>
@@ -267,17 +313,17 @@
 
               <div>
                 <div class="price-grid">
-                  <div class="price-row"><span>Padrão</span><b>#= kendo.toString(pe_padrao,"c2") #</b></div>
-                  <div class="price-row"><span>Promoção</span><b>#= kendo.toString(pe_promocao,"c2") #</b></div>
-                  <div class="price-row"><span>Rubi</span><b>#= kendo.toString(pe_rubi,"c2") #</b></div>
-                  <div class="price-row"><span>Safira</span><b>#= kendo.toString(pe_safira,"c2") #</b></div>
+                  <div class="price-row"><span>Padrão</span><b>#= (pe_padrao != null ? kendo.toString(pe_padrao,"c2") : "-") #</b></div>
+                  <div class="price-row"><span>Promoção</span><b>#= (pe_promocao != null ? kendo.toString(pe_promocao,"c2") : "-") #</b></div>
+                  <div class="price-row"><span>Rubi</span><b>#= (pe_rubi != null ? kendo.toString(pe_rubi,"c2") : "-") #</b></div>
+                  <div class="price-row"><span>Safira</span><b>#= (pe_safira != null ? kendo.toString(pe_safira,"c2") : "-") #</b></div>
                 </div>
               </div>
 
               <div>
                 <div class="price-grid">
-                  <div class="price-row"><span>Padrão</span><b>#= kendo.toString(pi_padrao,"c2") #</b></div>
-                  <div class="price-row"><span>Rubi</span><b>#= kendo.toString(pi_rubi,"c2") #</b></div>
+                  <div class="price-row"><span>Padrão</span><b>#= (pi_padrao != null ? kendo.toString(pi_padrao,"c2") : "-") #</b></div>
+                  <div class="price-row"><span>Rubi</span><b>#= (pi_rubi != null ? kendo.toString(pi_rubi,"c2") : "-") #</b></div>
                 </div>
               </div>
 
@@ -288,7 +334,7 @@
     </tr>
   `);
 
-    // switch
+    // --------- SWITCH AUTO/COLUMNS/STACK ----------
     let mode = "auto";
     let currentLayout = null;
     const BREAKPOINT = 900;
@@ -335,6 +381,7 @@
         });
     }
 
+    // --------- GRID ----------
     const grid = $("#grid").kendoGrid({
         dataSource: { data, pageSize: 10, schema: { model: { id:"id" } } },
         height: 540,
@@ -381,15 +428,15 @@
             if (!g.wrapper) return;
             const $wrap = g.wrapper;
 
-            // classe
             if (currentLayout === "stacked") $wrap.addClass("is-stacked");
             else $wrap.removeClass("is-stacked");
 
-            // destruir só widgets nossos
+            // destruir widgets nossos
             $wrap.find(".row-actions-ddb").each(function(){
                 const w = $(this).data("kendoDropDownButton");
                 if (w) w.destroy();
             });
+
             const bulkW = $("#bulkActionsMobile").data("kendoDropDownButton");
             if (bulkW) bulkW.destroy();
 
@@ -398,7 +445,10 @@
                 if (t) t.destroy();
             });
 
-            // topo
+            const pop = $wrap.data("kendoPopover");
+            if (pop) pop.destroy();
+
+            // topo: botões
             $(".bulk-action-btn").each(function(){
                 if (!$(this).data("kendoButton")) $(this).kendoButton({ themeColor:"base" });
             });
@@ -431,20 +481,44 @@
                 });
             });
 
-            // STACK: inicializa abas e força PE selecionada
+            // Stack: tabs
             if (currentLayout === "stacked") {
                 $wrap.find(".stack-tabs").each(function(){
                     const tab = $(this).kendoTabStrip({ animation: { open: { effects: "fadeIn" } } }).data("kendoTabStrip");
                     if (tab) tab.select(0);
                 });
 
-                // não deixar clique em tabs/botões afetar seleção
                 $wrap.off("click.stackStop").on("click.stackStop", ".stack-interactive *", function(ev){
                     ev.stopPropagation();
                 });
             } else {
                 $wrap.off("click.stackStop");
             }
+
+            // Desktop: Popover de preços (AGORA CERTO)
+            $wrap.kendoPopover({
+                filter: ".price-details-btn",
+                showOn: "click",
+                position: "left",
+                width: 340,
+                header: "Preços (PE/PI)",
+                encoded: false, // <<< ESSENCIAL: renderiza HTML (tabela) de verdade
+                content: function(e){
+                    const $btn = $(e.target).closest(".price-details-btn");
+                    const uid = $btn.data("uid");
+                    const item = uid ? g.dataSource.getByUid(uid) : null;
+
+                    if (!item) return "<div style='padding:8px;'>Item não encontrado.</div>";
+
+                    const obj = item.toJSON ? item.toJSON() : item;
+                    return pricePopoverHtml(obj);
+                }
+            });
+
+            // Evita que clicar no botão “Detalhes” altere seleção da linha
+            $wrap.off("click.stopSelectPrice").on("click.stopSelectPrice", ".price-details-btn", function(ev){
+                ev.stopPropagation();
+            });
 
             updateBulkUI(g);
 
@@ -478,6 +552,7 @@
         if (ddb) ddb.enable(count > 0);
     }
 
+    // init
     applyLayoutIfChanged();
 </script>
 </body>
